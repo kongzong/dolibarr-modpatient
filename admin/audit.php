@@ -75,12 +75,117 @@ if ($page < 0) {
 }
 $offset = $limit * $page;
 
-$actions = array('CREATE' => 'PATIENT_CREATE', 'MODIFY' => 'PATIENT_MODIFY', 'DISABLE' => 'PATIENT_DISABLE',
-	'ALLERGY_ADD' => 'PATIENT_ALLERGY_ADD', 'ALLERGY_DELETE' => 'PATIENT_ALLERGY_DELETE',
-	'READ_PROFILE' => 'READ_PROFILE', 'READ_IDNUMBER' => 'READ_IDNUMBER');
+// Actions come from the table itself so other healthcare modules' MEDRECORD_* etc. are filterable.
+// Labels: PatientAudit_<code> from any loaded lang file (modules add theirs), code as fallback.
+if (isModEnabled('medrecord')) {
+	$langs->load('medrecord@medrecord');
+}
+$actions = array();
+$resql = $db->query("SELECT DISTINCT action FROM ".$db->prefix()."patient_audit WHERE entity = ".((int) $conf->entity)." ORDER BY action");
+if ($resql) {
+	while ($o = $db->fetch_object($resql)) {
+		$actions[] = $o->action;
+	}
+	$db->free($resql);
+}
 $actionOptions = array();
 foreach ($actions as $code) {
-	$actionOptions[$code] = $langs->trans('PatientAudit_'.$code);
+	$label = $langs->trans('PatientAudit_'.$code);
+	$actionOptions[$code] = ($label === 'PatientAudit_'.$code) ? $code : $label;
+}
+
+/**
+ * Line-level diff of two texts: removed lines struck through in red, added
+ * lines in green, unchanged lines folded to "…". Simple LCS on lines, good
+ * enough for clinical notes (a few dozen lines at most).
+ *
+ * @param	string	$old	Old text (LF line endings)
+ * @param	string	$new	New text
+ * @return	string			Escaped HTML
+ */
+function patient_audit_line_diff($old, $new)
+{
+	$a = $old === '' ? array() : explode("\n", $old);
+	$b = $new === '' ? array() : explode("\n", $new);
+	$n = count($a);
+	$m = count($b);
+	// LCS table
+	$lcs = array_fill(0, $n + 1, array_fill(0, $m + 1, 0));
+	for ($i = $n - 1; $i >= 0; $i--) {
+		for ($j = $m - 1; $j >= 0; $j--) {
+			$lcs[$i][$j] = ($a[$i] === $b[$j]) ? $lcs[$i + 1][$j + 1] + 1 : max($lcs[$i + 1][$j], $lcs[$i][$j + 1]);
+		}
+	}
+	$out = array();
+	$i = 0;
+	$j = 0;
+	$folded = false;
+	while ($i < $n && $j < $m) {
+		if ($a[$i] === $b[$j]) {
+			if (!$folded) {
+				$out[] = '<span class="opacitymedium">…</span>';
+				$folded = true;
+			}
+			$i++;
+			$j++;
+		} elseif ($lcs[$i + 1][$j] >= $lcs[$i][$j + 1]) {
+			$out[] = '<del style="color:#b00;">'.dol_escape_htmltag($a[$i]).'</del>';
+			$i++;
+			$folded = false;
+		} else {
+			$out[] = '<ins style="color:#080;text-decoration:none;">'.dol_escape_htmltag($b[$j]).'</ins>';
+			$j++;
+			$folded = false;
+		}
+	}
+	for (; $i < $n; $i++) {
+		$out[] = '<del style="color:#b00;">'.dol_escape_htmltag($a[$i]).'</del>';
+	}
+	for (; $j < $m; $j++) {
+		$out[] = '<ins style="color:#080;text-decoration:none;">'.dol_escape_htmltag($b[$j]).'</ins>';
+	}
+	return implode('<br>', $out);
+}
+
+/**
+ * Human-readable rendering of the JSON detail column.
+ * A "changes" map {field: {old, new}} becomes one block per field: short
+ * single-line values inline (old → new), multi-line or long values as a
+ * line diff. Other keys are shown as key=value.
+ *
+ * @param	string	$json	Stored detail
+ * @return	string			Escaped HTML
+ */
+function patient_audit_render_detail($json)
+{
+	global $langs;
+
+	$data = json_decode((string) $json, true);
+	if (!is_array($data)) {
+		return dol_escape_htmltag((string) $json);
+	}
+	$out = array();
+	foreach ($data as $k => $v) {
+		if ($k === 'changes' && is_array($v)) {
+			foreach ($v as $field => $pair) {
+				$fieldLabel = $langs->trans('MedRecord'.str_replace(' ', '', ucwords(str_replace('_', ' ', $field))));
+				if (strpos($fieldLabel, 'MedRecord') === 0) {
+					$fieldLabel = $field;
+				}
+				$old = isset($pair['old']) ? str_replace("\r", '', (string) $pair['old']) : '';
+				$new = isset($pair['new']) ? str_replace("\r", '', (string) $pair['new']) : '';
+				$multiline = (strpos($old, "\n") !== false || strpos($new, "\n") !== false || dol_strlen($old) > 60 || dol_strlen($new) > 60);
+				if ($multiline) {
+					$out[] = '<strong>'.dol_escape_htmltag($fieldLabel).'</strong>:<div style="margin:2px 0 6px 12px;">'.patient_audit_line_diff($old, $new).'</div>';
+				} else {
+					$out[] = '<strong>'.dol_escape_htmltag($fieldLabel).'</strong>: <del class="opacitymedium">'.dol_escape_htmltag($old !== '' ? $old : '∅').'</del> &rarr; '.dol_escape_htmltag($new !== '' ? $new : '∅');
+				}
+			}
+			continue;
+		}
+		$out[] = dol_escape_htmltag($k).'='.dol_escape_htmltag(is_scalar($v) ? (string) $v : json_encode($v, JSON_UNESCAPED_UNICODE));
+	}
+	return implode('<br>', $out);
 }
 
 $from = " FROM ".$db->prefix()."patient_audit as a";
@@ -193,7 +298,7 @@ while ($obj = $db->fetch_object($resql)) {
 	print '<td>'.($obj->login ? dol_escape_htmltag(trim($obj->lastname.' '.$obj->firstname).' ('.$obj->login.')') : '').'</td>';
 	print '<td>'.dol_print_date($db->jdate($obj->date_creation), 'dayhoursec').'</td>';
 	print '<td>'.dol_escape_htmltag((string) $obj->ip).'</td>';
-	print '<td class="small">'.dol_escape_htmltag((string) $obj->detail).'</td>';
+	print '<td class="small">'.patient_audit_render_detail($obj->detail).'</td>';
 	print '<td></td>';
 	print '</tr>';
 }

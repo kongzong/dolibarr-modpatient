@@ -332,7 +332,13 @@ class PatientTest extends TestCase
 		$this->assertStringContainsString("'value' =>", $ajax);
 
 		$desc = file_get_contents(__DIR__.'/../../core/modules/modPatient.class.php');
-		$this->assertStringContainsString("version = '0.1.1'", $desc);
+		$this->assertStringContainsString("version = '0.1.2'", $desc);
+
+		// 0.1.2: audit page renders field-level diffs and lists actions dynamically (other modules' MEDRECORD_* rows)
+		$audit = file_get_contents(__DIR__.'/../../admin/audit.php');
+		$this->assertStringContainsString('function patient_audit_line_diff', $audit);
+		$this->assertStringContainsString('function patient_audit_render_detail', $audit);
+		$this->assertStringContainsString('SELECT DISTINCT action FROM', $audit);
 	}
 
 	/**
