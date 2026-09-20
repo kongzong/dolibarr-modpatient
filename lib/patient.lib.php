@@ -289,7 +289,157 @@ function patient_prepare_head($object)
 		$h++;
 	}
 
+	// 0.1.1: later healthcare modules add tabs with 'patient:+name:...' in their descriptor
+	global $conf;
+	complete_head_from_modules($conf, $langs, $object, $head, $h, 'patient', 'add', 'core');
+	complete_head_from_modules($conf, $langs, $object, $head, $h, 'patient', 'add', 'external');
+	complete_head_from_modules($conf, $langs, $object, $head, $h, 'patient', 'remove');
+
 	return $head;
+}
+
+/**
+ * 0.1.1: patient picker (card no / name / phone search, AJAX autocomplete).
+ * Renders a visible search input + hidden input "$htmlname" holding the
+ * patient rowid, like Form::select_company() in search mode. Data source:
+ * /patient/ajax/search.php (requires 'patient read').
+ *
+ * @param	DoliDB	$db			Database handler
+ * @param	string	$htmlname	Name of the hidden input that receives fk_patient
+ * @param	int		$selected	Preselected patient rowid (0 for none)
+ * @param	string	$morecss	CSS classes of the visible input
+ * @param	string	$placeholder	Placeholder text ('' = translated default)
+ * @return	string				HTML + JS
+ */
+function patient_select_html($db, $htmlname = 'fk_patient', $selected = 0, $morecss = 'minwidth300', $placeholder = '')
+{
+	global $langs;
+
+	require_once DOL_DOCUMENT_ROOT.'/core/lib/ajax.lib.php';
+	dol_include_once('/patient/class/patientprofile.class.php');
+
+	$langs->load('patient@patient');
+	$selected = (int) $selected;
+	$selectedLabel = '';
+	if ($selected > 0) {
+		$p = new PatientProfile($db);
+		if ($p->fetch($selected) > 0) {
+			$selectedLabel = $p->card_no.($p->thirdparty ? ' - '.$p->thirdparty->name : '');
+		}
+	}
+	if ($placeholder === '') {
+		$placeholder = $langs->trans('PatientSearchHint');
+	}
+
+	$out = '<!-- force css to be higher than dialog popup --><style type="text/css">.ui-autocomplete { z-index: 1010; }</style>';
+	$out .= '<input type="text" class="'.$morecss.'" name="search_'.$htmlname.'" id="search_'.$htmlname.'" value="'.dol_escape_htmltag($selectedLabel).'" placeholder="'.dol_escape_htmltag($placeholder).'" autocomplete="off" />';
+	$out .= ajax_autocompleter((string) $selected, $htmlname, dol_buildpath('/patient/ajax/search.php', 1), 'htmlname='.urlencode($htmlname), 1, 0, array());
+	return $out;
+}
+
+/**
+ * 0.1.1: header summary shared by visit / prescription / booking pages.
+ * Never includes the ID number; allergies only for 'profile' holders and
+ * that read is NOT audited here (the calling page audits its own view).
+ *
+ * @param	DoliDB	$db			Database handler
+ * @param	int		$fkPatient	Patient rowid
+ * @return	array<string,mixed>|null	null when not found
+ */
+function patient_get_summary($db, $fkPatient)
+{
+	global $user, $langs;
+
+	dol_include_once('/patient/class/patientprofile.class.php');
+	$langs->load('patient@patient');
+
+	$p = new PatientProfile($db);
+	if ((int) $fkPatient <= 0 || $p->fetch((int) $fkPatient) <= 0) {
+		return null;
+	}
+	$genders = array('U' => $langs->trans('PatientGenderU'), 'M' => $langs->trans('PatientGenderM'), 'F' => $langs->trans('PatientGenderF'));
+	$summary = array(
+		'id' => (int) $p->id,
+		'fk_soc' => (int) $p->fk_soc,
+		'card_no' => $p->card_no,
+		'name' => $p->thirdparty ? $p->thirdparty->name : '',
+		'gender' => $p->gender,
+		'gender_label' => isset($genders[$p->gender]) ? $genders[$p->gender] : '',
+		'birth_date' => $p->birth_date,
+		'age' => $p->getAge(),
+		'phone' => $p->thirdparty ? $p->thirdparty->phone : '',
+		'status' => (int) $p->status,
+		'history_note' => null,
+		'allergies' => null,
+		'has_severe_allergy' => false,
+		'url' => dol_buildpath('/patient/card.php', 1).'?id='.((int) $p->id),
+	);
+	if ($user->hasRight('patient', 'profile')) {
+		dol_include_once('/patient/class/patientallergy.class.php');
+		$summary['history_note'] = $p->history_note;
+		$dao = new PatientAllergy($db);
+		$rows = $dao->fetchAllByPatient($p->id);
+		$summary['allergies'] = array();
+		foreach ($rows ?: array() as $a) {
+			$summary['allergies'][] = array('id' => (int) $a->id, 'name' => $a->name, 'severity' => (int) $a->severity, 'type' => $a->allergy_type, 'fk_product' => $a->fk_product);
+			if ($a->severity >= 3) {
+				$summary['has_severe_allergy'] = true;
+			}
+		}
+	}
+	return $summary;
+}
+
+/**
+ * 0.1.1: render patient_get_summary() as a compact banner (name, card, gender,
+ * age, phone, allergy chips with a red severe warning).
+ *
+ * @param	array|null	$summary	Result of patient_get_summary()
+ * @return	string					HTML ('' when null)
+ */
+function patient_summary_banner($summary)
+{
+	global $langs;
+
+	if (empty($summary)) {
+		return '';
+	}
+	$langs->load('patient@patient');
+	$out = '<div class="patient-summary-banner" style="padding:8px 12px;margin-bottom:10px;border:1px solid #ddd;border-radius:6px;background:#fafafa;">';
+	$out .= '<a href="'.$summary['url'].'"><strong>'.dol_escape_htmltag($summary['name']).'</strong></a>';
+	$out .= ' <span class="opacitymedium">'.dol_escape_htmltag($summary['card_no']).'</span>';
+	$parts = array();
+	if ($summary['gender_label'] !== '') {
+		$parts[] = $summary['gender_label'];
+	}
+	if ($summary['age'] !== null) {
+		$parts[] = $langs->trans('PatientAgeYears', $summary['age']);
+	}
+	if ($summary['phone'] !== '') {
+		$parts[] = dol_escape_htmltag($summary['phone']);
+	}
+	if ($parts) {
+		$out .= ' &middot; '.implode(' &middot; ', $parts);
+	}
+	if (!$summary['status']) {
+		$out .= ' <span class="badge badge-status5">'.$langs->trans('Disabled').'</span>';
+	}
+	if (is_array($summary['allergies'])) {
+		$out .= '<div style="margin-top:4px;">';
+		if ($summary['has_severe_allergy']) {
+			$out .= '<span class="error">'.img_warning('').' '.$langs->trans('PatientAllergySevereWarning').'</span> ';
+		}
+		if (empty($summary['allergies'])) {
+			$out .= '<span class="opacitymedium">'.$langs->trans('PatientAllergyNone').'</span>';
+		}
+		foreach ($summary['allergies'] as $a) {
+			$cls = $a['severity'] >= 3 ? 'badge-status8' : ($a['severity'] == 2 ? 'badge-status1' : 'badge-status0');
+			$out .= '<span class="badge '.$cls.'">'.dol_escape_htmltag($a['name']).'</span> ';
+		}
+		$out .= '</div>';
+	}
+	$out .= '</div>';
+	return $out;
 }
 
 /**

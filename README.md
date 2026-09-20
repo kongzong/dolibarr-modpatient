@@ -4,7 +4,17 @@ Dolibarr 22.0.x 外部模块：面向中医馆/诊所的患者档案与就诊卡
 医疗模块群（`custom/HEALTHCARE-MODULES-PLAN.md`）一期第一个模块，同时承担后续模块的公共库角色
 （患者选择器、审计写入、"诊所"顶级菜单）。
 
-当前版本：**0.1.0**（2026-09-20 四阶段全部验收通过，标签 `v0.1.0`）。规格见 [docs/spec-patient-v0.1.md](docs/spec-patient-v0.1.md)。
+当前版本：**0.1.1**（2026-09-20，为后续医疗模块开放集成面；0.1.0 四阶段验收见下文，标签 `v0.1.0`）。规格见 [docs/spec-patient-v0.1.md](docs/spec-patient-v0.1.md)。
+
+## 0.1.1 变更（供 modMedRecord 等模块使用）
+
+- `patient_prepare_head()` 末尾调用 `complete_head_from_modules(..., 'patient')`：外部模块在 descriptor 里声明
+  `$this->tabs[] = array('data' => 'patient:+xxx:Title:lang@mod:$user->hasRight(...):/mod/page.php?id=__ID__')` 即可在患者卡片加 Tab
+- `patient_select_html($db, $htmlname, $selected)`：患者选择器（jQuery autocomplete，数据源 `ajax/search.php`，需 `patient read`）；
+  隐藏输入 `$htmlname` 接收患者 rowid
+- `patient_get_summary($db, $fkPatient)` / `patient_summary_banner($summary)`：页头患者摘要（姓名、卡号、性别、年龄、电话；
+  有 `profile` 时附过敏芯片与重度警示）。摘要不含证件号；调用页自行写审计
+- 无表结构变更，不需重新启用
 
 ## 设计要点
 

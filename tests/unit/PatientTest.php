@@ -305,6 +305,37 @@ class PatientTest extends TestCase
 	}
 
 	/**
+	 * 0.1.1: integration surface for later healthcare modules: patient card
+	 * tabs open to external modules, AJAX patient picker gated by read and
+	 * ciphertext-free, summary helper without ID number.
+	 */
+	public function testIntegrationSurface011()
+	{
+		$lib = file_get_contents(__DIR__.'/../../lib/patient.lib.php');
+		$this->assertStringContainsString("complete_head_from_modules(\$conf, \$langs, \$object, \$head, \$h, 'patient'", $lib, 'external modules can add patient tabs');
+		foreach (array('function patient_select_html', 'function patient_get_summary', 'function patient_summary_banner') as $fn) {
+			$this->assertStringContainsString($fn, $lib);
+		}
+		$this->assertStringContainsString('ajax_autocompleter(', $lib);
+		$summaryPos = strpos($lib, 'function patient_get_summary');
+		$summaryBody = substr($lib, $summaryPos, strpos($lib, 'function patient_summary_banner') - $summaryPos);
+		foreach (array('id_number', 'getIdNumberPlain', 'getIdNumberMasked') as $forbidden) {
+			$this->assertStringNotContainsString($forbidden, $summaryBody, 'summary never carries the ID number');
+		}
+		$this->assertStringContainsString("hasRight('patient', 'profile')", $summaryBody, 'allergies only for profile');
+
+		$ajax = file_get_contents(__DIR__.'/../../ajax/search.php');
+		$this->assertStringContainsString("hasRight('patient', 'read')", $ajax);
+		$this->assertStringContainsString('403 Forbidden', $ajax);
+		$this->assertStringNotContainsString('id_number_enc', $ajax);
+		$this->assertStringContainsString("'key' =>", $ajax, 'jQuery autocomplete contract');
+		$this->assertStringContainsString("'value' =>", $ajax);
+
+		$desc = file_get_contents(__DIR__.'/../../core/modules/modPatient.class.php');
+		$this->assertStringContainsString("version = '0.1.1'", $desc);
+	}
+
+	/**
 	 * Language files: both locales define the same keys, no hard-coded text
 	 * keys missing on either side.
 	 */
