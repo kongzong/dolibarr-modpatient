@@ -449,8 +449,9 @@ function patient_summary_banner($summary, $trail = array(), $active = '')
 	if (!empty($links)) {
 		$out .= '<div style="margin-top:6px;">';
 		foreach ($links as $key => $l) {
-			$cls = ($key === $active) ? 'butActionRefused' : 'butAction';
-			$out .= '<a class="'.$cls.' small" style="margin:0 4px 0 0;padding:2px 8px;" href="'.$l['url'].'">'.dol_escape_htmltag($l['label']).'</a>';
+			$active = ($key === $active);
+			$btnClass = $active ? 'butActionPatientTab active' : 'butActionPatientTab';
+			$out .= '<a class="'.$btnClass.'" href="'.$l['url'].'" style="margin:0 4px 0 0;padding:2px 9px;font-size:11px;display:inline-block;border-radius:3px;text-decoration:none;'.($active ? 'background:#e8eff5;color:#1a5276;border:1px solid #a9cce3;font-weight:bold;cursor:pointer;' : 'background:#f5f5f5;color:#444;border:1px solid #ddd;cursor:pointer;').'">'.dol_escape_htmltag($l['label']).'</a>';
 		}
 		$out .= '</div>';
 	}
