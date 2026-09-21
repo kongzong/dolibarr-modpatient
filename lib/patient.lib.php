@@ -391,15 +391,20 @@ function patient_get_summary($db, $fkPatient)
 }
 
 /**
- * 0.1.1: render patient_get_summary() as a compact banner (name, card, gender,
- * age, phone, allergy chips with a red severe warning).
+ * 0.1.1 / 0.1.3: render patient_get_summary() as a patient context bar:
+ * line 1 name, card, gender, age, phone, allergy chips (red severe warning);
+ * line 2 quick links to the patient's tabs (record, medical records,
+ * prescriptions, allergies) filtered by enabled modules + permissions;
+ * line 3 optional breadcrumb trail for pages that left the patient card.
  *
  * @param	array|null	$summary	Result of patient_get_summary()
+ * @param	array		$trail		Breadcrumb after "patient": [ ['label' => 'JZ-…', 'url' => '…'], ['label' => 'CF-…'] ]
+ * @param	string		$active		Key of the quick link to highlight: card | medrecord | prescription | allergies
  * @return	string					HTML ('' when null)
  */
-function patient_summary_banner($summary)
+function patient_summary_banner($summary, $trail = array(), $active = '')
 {
-	global $langs;
+	global $langs, $user;
 
 	if (empty($summary)) {
 		return '';
@@ -438,8 +443,58 @@ function patient_summary_banner($summary)
 		}
 		$out .= '</div>';
 	}
+
+	// Quick links: one click back to any tab of this patient from any page
+	$links = patient_context_links($summary['id']);
+	if (!empty($links)) {
+		$out .= '<div style="margin-top:6px;">';
+		foreach ($links as $key => $l) {
+			$cls = ($key === $active) ? 'butActionRefused' : 'butAction';
+			$out .= '<a class="'.$cls.' small" style="margin:0 4px 0 0;padding:2px 8px;" href="'.$l['url'].'">'.dol_escape_htmltag($l['label']).'</a>';
+		}
+		$out .= '</div>';
+	}
+
+	// Breadcrumb: patient › (caller-supplied segments)
+	if (!empty($trail)) {
+		$crumbs = array('<a href="'.$summary['url'].'">'.dol_escape_htmltag($summary['name']).'</a>');
+		foreach ($trail as $seg) {
+			$label = dol_escape_htmltag(isset($seg['label']) ? $seg['label'] : '');
+			$crumbs[] = !empty($seg['url']) ? '<a href="'.$seg['url'].'">'.$label.'</a>' : '<strong>'.$label.'</strong>';
+		}
+		$out .= '<div class="opacitymedium small" style="margin-top:4px;">'.implode(' &rsaquo; ', $crumbs).'</div>';
+	}
 	$out .= '</div>';
 	return $out;
+}
+
+/**
+ * Quick links to a patient's tabs, keyed for highlighting. Other healthcare
+ * modules are detected at runtime (isModEnabled + their read right) so the
+ * bar grows with the suite without touching this module again.
+ *
+ * @param	int		$fkPatient	Patient rowid
+ * @return	array<string,array{label:string,url:string}>
+ */
+function patient_context_links($fkPatient)
+{
+	global $langs, $user;
+
+	$fkPatient = (int) $fkPatient;
+	$links = array();
+	$links['card'] = array('label' => $langs->trans('PatientTab'), 'url' => dol_buildpath('/patient/card.php', 1).'?id='.$fkPatient);
+	if ($user->hasRight('patient', 'profile')) {
+		$links['allergies'] = array('label' => $langs->trans('PatientAllergies'), 'url' => dol_buildpath('/patient/allergies.php', 1).'?id='.$fkPatient);
+	}
+	if (isModEnabled('medrecord') && $user->hasRight('medrecord', 'read')) {
+		$langs->load('medrecord@medrecord');
+		$links['medrecord'] = array('label' => $langs->trans('MedRecordTab'), 'url' => dol_buildpath('/medrecord/patient_tab.php', 1).'?id='.$fkPatient);
+	}
+	if (isModEnabled('prescription') && $user->hasRight('prescription', 'read')) {
+		$langs->load('prescription@prescription');
+		$links['prescription'] = array('label' => $langs->trans('PrescriptionTab'), 'url' => dol_buildpath('/prescription/patient_tab.php', 1).'?id='.$fkPatient);
+	}
+	return $links;
 }
 
 /**

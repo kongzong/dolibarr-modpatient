@@ -332,7 +332,13 @@ class PatientTest extends TestCase
 		$this->assertStringContainsString("'value' =>", $ajax);
 
 		$desc = file_get_contents(__DIR__.'/../../core/modules/modPatient.class.php');
-		$this->assertStringContainsString("version = '0.1.2'", $desc);
+		$this->assertStringContainsString("version = '0.1.3'", $desc);
+
+		// 0.1.3: banner is a patient context bar (quick links + breadcrumb), other modules detected at runtime
+		$this->assertStringContainsString('function patient_summary_banner($summary, $trail = array(), $active = \'\')', $lib, 'backward compatible signature');
+		$this->assertStringContainsString('function patient_context_links', $lib);
+		$this->assertStringContainsString("isModEnabled('medrecord') && \$user->hasRight('medrecord', 'read')", $lib);
+		$this->assertStringContainsString("isModEnabled('prescription') && \$user->hasRight('prescription', 'read')", $lib);
 
 		// 0.1.2: audit page renders field-level diffs and lists actions dynamically (other modules' MEDRECORD_* rows)
 		$audit = file_get_contents(__DIR__.'/../../admin/audit.php');
