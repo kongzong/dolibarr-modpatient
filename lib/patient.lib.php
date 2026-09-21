@@ -449,20 +449,16 @@ function patient_summary_banner($summary, $trail = array(), $active = '')
 	if (!empty($links)) {
 		$out .= '<div style="margin-top:6px;">';
 		foreach ($links as $key => $l) {
-			$out .= '<a href="'.$l['url'].'" style="margin:0 4px 0 0;padding:2px 9px;font-size:11px;display:inline-block;border-radius:3px;text-decoration:none;cursor:pointer;background:#f5f5f5;color:#444;border:1px solid #ddd;">'.dol_escape_htmltag($l['label']).'</a>';
+				$isActive = ($key === $active);
+				$btnStyle = $isActive
+					? 'background:#1a73e8;color:#fff;border:1px solid #1a73e8;font-weight:bold;cursor:pointer;'
+					: 'background:#f5f5f5;color:#444;border:1px solid #ddd;cursor:pointer;';
+				$out .= '<a href="'.$l['url'].'" style="margin:0 4px 0 0;padding:2px 9px;font-size:11px;display:inline-block;border-radius:3px;text-decoration:none;'.$btnStyle.'">'.dol_escape_htmltag($l['label']).'</a>';
 		}
 		$out .= '</div>';
 	}
 
-	// Breadcrumb: patient › (caller-supplied segments)
-	if (!empty($trail)) {
-		$crumbs = array('<a href="'.$summary['url'].'">'.dol_escape_htmltag($summary['name']).'</a>');
-		foreach ($trail as $seg) {
-			$label = dol_escape_htmltag(isset($seg['label']) ? $seg['label'] : '');
-			$crumbs[] = !empty($seg['url']) ? '<a href="'.$seg['url'].'">'.$label.'</a>' : '<strong>'.$label.'</strong>';
-		}
-		$out .= '<div class="opacitymedium small" style="margin-top:4px;">'.implode(' &rsaquo; ', $crumbs).'</div>';
-	}
+
 	$out .= '</div>';
 	return $out;
 }
