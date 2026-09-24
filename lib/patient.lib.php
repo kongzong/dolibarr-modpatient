@@ -394,12 +394,12 @@ function patient_get_summary($db, $fkPatient)
  * 0.1.1 / 0.1.3: render patient_get_summary() as a patient context bar:
  * line 1 name, card, gender, age, phone, allergy chips (red severe warning);
  * line 2 quick links to the patient's tabs (record, medical records,
- * prescriptions, allergies) filtered by enabled modules + permissions;
+ * prescriptions, dispenses, allergies) filtered by enabled modules + permissions;
  * line 3 optional breadcrumb trail for pages that left the patient card.
  *
  * @param	array|null	$summary	Result of patient_get_summary()
  * @param	array		$trail		Breadcrumb after "patient": [ ['label' => 'JZ-…', 'url' => '…'], ['label' => 'CF-…'] ]
- * @param	string		$active		Key of the quick link to highlight: card | medrecord | prescription | allergies
+ * @param	string		$active		Key of the quick link to highlight: card | medrecord | prescription | pharmacy | allergies
  * @return	string					HTML ('' when null)
  */
 function patient_summary_banner($summary, $trail = array(), $active = '')
@@ -488,6 +488,10 @@ function patient_context_links($fkPatient)
 	if (isModEnabled('prescription') && $user->hasRight('prescription', 'read')) {
 		$langs->load('prescription@prescription');
 		$links['prescription'] = array('label' => $langs->trans('PrescriptionTab'), 'url' => dol_buildpath('/prescription/patient_tab.php', 1).'?id='.$fkPatient);
+	}
+	if (isModEnabled('pharmacy') && $user->hasRight('pharmacy', 'read')) {
+		$langs->load('pharmacy@pharmacy');
+		$links['pharmacy'] = array('label' => $langs->trans('PharmacyDispenseList'), 'url' => dol_buildpath('/pharmacy/list.php', 1).'?search_fk_patient='.$fkPatient);
 	}
 	return $links;
 }
