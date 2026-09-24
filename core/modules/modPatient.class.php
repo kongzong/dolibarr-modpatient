@@ -59,7 +59,7 @@ class modPatient extends DolibarrModules
 		$this->editor_name = 'modPatient';
 		$this->editor_url = 'https://github.com/kongzong/dolibarr-modpatient';
 
-		$this->version = '0.1.3';
+		$this->version = '0.1.6';
 
 		// Key used in llx_const table to save module status enabled/disabled
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
