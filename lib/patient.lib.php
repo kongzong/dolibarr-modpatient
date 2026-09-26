@@ -270,30 +270,57 @@ function patient_dict_label($db, $table, $code)
  */
 function patient_prepare_head($object)
 {
-	global $langs, $user;
+	global $langs, $user, $conf;
 
 	$langs->load('patient@patient');
 	$h = 0;
 	$head = array();
 
+	// Manual 'card' tab, always first. modPatient's own patient-card tab is
+	// manual (not descriptor-registered) to avoid empty slot gaps in
+	// dol_get_fiche_head.
 	$head[$h][0] = dol_buildpath('/patient/card.php', 1).'?id='.((int) $object->id);
 	$head[$h][1] = $langs->trans('PatientTab');
 	$head[$h][2] = 'card';
 	$h++;
 
-	// Allergies: medical data, only offered to 'profile' holders (spec §2.4)
-	if ($user->hasRight('patient', 'profile')) {
+	// 0.1.1: healthcare modules register tabs via 'patient:+name:...' in their
+	// descriptor. Collect them into a SEPARATE array: dol_get_fiche_head does
+	// NOT sort the head, so the raw module order would drift with module
+	// enable order. We re-order below into a fixed, predictable sequence.
+	$modHead = array();
+	$mh = 0;
+	complete_head_from_modules($conf, $langs, $object, $modHead, $mh, 'patient', 'add', 'core');
+	complete_head_from_modules($conf, $langs, $object, $modHead, $mh, 'patient', 'add', 'external');
+	complete_head_from_modules($conf, $langs, $object, $modHead, $mh, 'patient', 'remove');
+
+	// Fixed display order: 诊疗业务 (medrecord, prescription, dispensing)
+	// then 财务 (clinicpay_bills, clinicpay_cards). Any future/unknown
+	// module tabs fall through at the end in their original order.
+	$order = array('medrecord', 'prescription', 'dispensing', 'clinicpay_bills', 'clinicpay_cards');
+	$byKey = array();
+	foreach ($modHead as $item) {
+		$byKey[$item[2]] = $item;
+	}
+	foreach ($order as $k) {
+		if (isset($byKey[$k])) {
+			$head[$h] = $byKey[$k];
+			$h++;
+			unset($byKey[$k]);
+		}
+	}
+	foreach ($byKey as $item) {  // leftover (unknown) module tabs
+		$head[$h] = $item;
+		$h++;
+	}
+
+	// Allergy tab (medical data, profile holders only, spec §2.4), always last.
+	if ($user->hasRight('patient', 'read') && $user->hasRight('patient', 'profile')) {
 		$head[$h][0] = dol_buildpath('/patient/allergies.php', 1).'?id='.((int) $object->id);
 		$head[$h][1] = $langs->trans('PatientAllergies');
 		$head[$h][2] = 'allergies';
 		$h++;
 	}
-
-	// 0.1.1: later healthcare modules add tabs with 'patient:+name:...' in their descriptor
-	global $conf;
-	complete_head_from_modules($conf, $langs, $object, $head, $h, 'patient', 'add', 'core');
-	complete_head_from_modules($conf, $langs, $object, $head, $h, 'patient', 'add', 'external');
-	complete_head_from_modules($conf, $langs, $object, $head, $h, 'patient', 'remove');
 
 	return $head;
 }
@@ -478,9 +505,6 @@ function patient_context_links($fkPatient)
 	$fkPatient = (int) $fkPatient;
 	$links = array();
 	$links['card'] = array('label' => $langs->trans('PatientTab'), 'url' => dol_buildpath('/patient/card.php', 1).'?id='.$fkPatient);
-	if ($user->hasRight('patient', 'profile')) {
-		$links['allergies'] = array('label' => $langs->trans('PatientAllergies'), 'url' => dol_buildpath('/patient/allergies.php', 1).'?id='.$fkPatient);
-	}
 	if (isModEnabled('medrecord') && $user->hasRight('medrecord', 'read')) {
 		$langs->load('medrecord@medrecord');
 		$links['medrecord'] = array('label' => $langs->trans('MedRecordTab'), 'url' => dol_buildpath('/medrecord/patient_tab.php', 1).'?id='.$fkPatient);
@@ -491,7 +515,17 @@ function patient_context_links($fkPatient)
 	}
 	if (isModEnabled('pharmacy') && $user->hasRight('pharmacy', 'read')) {
 		$langs->load('pharmacy@pharmacy');
-		$links['pharmacy'] = array('label' => $langs->trans('PharmacyDispenseList'), 'url' => dol_buildpath('/pharmacy/list.php', 1).'?search_fk_patient='.$fkPatient);
+		$links['pharmacy'] = array('label' => $langs->trans('PharmacyDispenseList'), 'url' => dol_buildpath('/pharmacy/patient_tab.php', 1).'?id='.$fkPatient);
+	}
+	if (isModEnabled('clinicpay') && $user->hasRight('clinicpay', 'read')) {
+		$langs->load('clinicpay@clinicpay');
+		$links['clinicpay_bills'] = array('label' => $langs->trans('ClinicPayBillTab'), 'url' => dol_buildpath('/clinicpay/patient_tab.php', 1).'?tab=bills&id='.$fkPatient);
+		$links['clinicpay_cards'] = array('label' => $langs->trans('ClinicPayCardTab'), 'url' => dol_buildpath('/clinicpay/patient_tab.php', 1).'?tab=cards&id='.$fkPatient);
+	}
+	// Allergies LAST: same order as the patient card tabs (design §5.1,
+	// card / visits / prescriptions / dispensing / bills / cards / allergies).
+	if ($user->hasRight('patient', 'profile')) {
+		$links['allergies'] = array('label' => $langs->trans('PatientAllergies'), 'url' => dol_buildpath('/patient/allergies.php', 1).'?id='.$fkPatient);
 	}
 	return $links;
 }
