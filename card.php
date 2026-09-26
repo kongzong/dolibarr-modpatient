@@ -434,7 +434,7 @@ if ($action == 'create') {
 		print '<div class="fichehalfright"><table class="border tableforfield centpercent">';
 		print '<tr><td class="titlefield tdtop">'.$langs->trans("Address").'</td><td>';
 		if ($soc) {
-			print dol_nl2br(dol_escape_htmltag($soc->address));
+			print dol_nl2br(dol_escape_htmltag($soc->address, 0, 1));
 			$line = trim($soc->zip.' '.$soc->town);
 			if ($soc->state) {
 				$line = trim($soc->state.' '.$line);
@@ -481,9 +481,9 @@ if ($action == 'create') {
 			}
 			print ' <a href="'.dol_buildpath('/patient/allergies.php', 1).'?id='.$object->id.'">'.img_edit($langs->trans("Modify")).'</a>';
 			print '</td></tr>';
-			print '<tr><td class="tdtop">'.$langs->trans("PatientHistory").'</td><td>'.dol_nl2br(dol_escape_htmltag((string) $object->history_note)).'</td></tr>';
+			print '<tr><td class="tdtop">'.$langs->trans("PatientHistory").'</td><td>'.dol_nl2br(dol_escape_htmltag((string) $object->history_note, 0, 1)).'</td></tr>';
 		}
-		print '<tr><td class="tdtop">'.$langs->trans("NotePrivate").'</td><td>'.dol_nl2br(dol_escape_htmltag((string) $object->note_private)).'</td></tr>';
+		print '<tr><td class="tdtop">'.$langs->trans("NotePrivate").'</td><td>'.dol_nl2br(dol_escape_htmltag((string) $object->note_private, 0, 1)).'</td></tr>';
 		print '<tr><td>'.$langs->trans("DateCreation").'</td><td>'.dol_print_date($object->date_creation, 'dayhour').'</td></tr>';
 		print '</table></div></div>';
 		print '<div class="clearboth"></div>';
