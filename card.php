@@ -498,6 +498,10 @@ if ($action == 'create') {
 			print dolGetButtonAction($langs->trans($object->status ? "Disable" : "Enable"), '', $object->status ? 'delete' : 'default', $_SERVER["PHP_SELF"].'?id='.$object->id.'&action=setstatus&token='.newToken(), '', 1);
 		}
 		print '</div>';
+
+		// Unified business actions for this patient (create visit /
+		// prescription / bill / card / allergy), fk_patient prefilled.
+		print patient_action_bar($object->id);
 	}
 } else {
 	print load_fiche_titre($langs->trans("PatientTab"), '', 'user');

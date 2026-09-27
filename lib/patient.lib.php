@@ -485,6 +485,13 @@ function patient_summary_banner($summary, $trail = array(), $active = '')
 		$out .= '</div>';
 	}
 
+	// Unified business actions (create visit / prescription / bill / card /
+	// allergy), fk_patient prefilled — same order as the tabs bar above.
+	$actionBar = patient_action_bar($summary['id'], true);
+	if ($actionBar !== '') {
+		$out .= '<div style="margin-top:6px;">'.$actionBar.'</div>';
+	}
+
 
 	$out .= '</div>';
 	return $out;
@@ -528,6 +535,65 @@ function patient_context_links($fkPatient)
 		$links['allergies'] = array('label' => $langs->trans('PatientAllergies'), 'url' => dol_buildpath('/patient/allergies.php', 1).'?id='.$fkPatient);
 	}
 	return $links;
+}
+
+/**
+ * Unified business action bar for one patient: create visit / prescription /
+ * bill / sell prepaid card / allergy entry, ordered like the patient card
+ * tabs. Every action deep-links into the target module's create form with
+ * fk_patient prefilled, so "select a patient, then do anything" is one click
+ * away from the patient card. Visibility follows isModEnabled + each
+ * module's write right, so the bar grows with the suite without touching
+ * callers. Stock dispensing is intentionally NOT here: a dispense belongs to
+ * a prescription, its entry point stays on the prescription detail page.
+ *
+ * @param	int		$fkPatient	Patient rowid
+ * @param	bool	$compact	True: small chip style (summary banner); false: tabsAction style (patient card)
+ * @return	string				HTML ('' when nothing is available)
+ */
+function patient_action_bar($fkPatient, $compact = false)
+{
+	global $langs, $user;
+
+	$fkPatient = (int) $fkPatient;
+	if ($fkPatient <= 0) {
+		return '';
+	}
+	$actions = array();
+	if (isModEnabled('medrecord') && $user->hasRight('medrecord', 'write')) {
+		$langs->load('medrecord@medrecord');
+		$actions[] = array('label' => $langs->trans('MedRecordNew'), 'url' => dol_buildpath('/medrecord/card.php', 1).'?action=create&fk_patient='.$fkPatient);
+	}
+	if (isModEnabled('prescription') && $user->hasRight('prescription', 'write')) {
+		$langs->load('prescription@prescription');
+		$actions[] = array('label' => $langs->trans('PrescriptionNew'), 'url' => dol_buildpath('/prescription/card.php', 1).'?action=create&fk_patient='.$fkPatient);
+	}
+	if (isModEnabled('clinicpay') && $user->hasRight('clinicpay', 'write')) {
+		$langs->load('clinicpay@clinicpay');
+		$actions[] = array('label' => $langs->trans('ClinicPayBillNew'), 'url' => dol_buildpath('/clinicpay/bill.php', 1).'?action=create&fk_patient='.$fkPatient);
+		$actions[] = array('label' => $langs->trans('ClinicPayCardNew'), 'url' => dol_buildpath('/clinicpay/card.php', 1).'?action=create&fk_patient='.$fkPatient);
+	}
+	if ($user->hasRight('patient', 'read') && $user->hasRight('patient', 'profile')) {
+		$actions[] = array('label' => $langs->trans('PatientAllergyAdd'), 'url' => dol_buildpath('/patient/allergies.php', 1).'?id='.$fkPatient);
+	}
+	if (empty($actions)) {
+		return '';
+	}
+
+	if (!$compact) {
+		$out = '<div class="tabsAction patient-action-bar">';
+		foreach ($actions as $a) {
+			$out .= dolGetButtonAction($a['label'], '', 'default', $a['url'], '', 1);
+		}
+		$out .= '</div>';
+		return $out;
+	}
+
+	$out = '';
+	foreach ($actions as $a) {
+		$out .= '<a href="'.$a['url'].'" style="margin:0 4px 0 0;padding:2px 9px;font-size:11px;display:inline-block;border-radius:3px;text-decoration:none;background:#e8f0fe;color:#1a56a8;border:1px solid #c5d7f2;">'.dol_escape_htmltag($a['label']).'</a>';
+	}
+	return $out;
 }
 
 /**
