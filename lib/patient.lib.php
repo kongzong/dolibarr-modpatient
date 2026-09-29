@@ -596,6 +596,87 @@ function patient_action_bar($fkPatient, $compact = false)
 	return $out;
 }
 
+// ------------------------------------------------------------ walk-in patient
+
+/** Fixed card number that identifies the shared walk-in (OTC retail) profile */
+if (!defined('PATIENT_WALKIN_CARD_NO')) {
+	define('PATIENT_WALKIN_CARD_NO', 'WALKIN');
+}
+
+/** Stored name of that profile: data, deliberately not language dependent */
+if (!defined('PATIENT_WALKIN_NAME')) {
+	define('PATIENT_WALKIN_NAME', '散客（零售）');
+}
+
+/**
+ * True when a card number belongs to the shared walk-in profile. Used by the
+ * patient list to grey the row and by reports to split retail sales.
+ *
+ * @param	string	$cardNo		Profile card number
+ * @return	bool
+ */
+function patient_is_walkin($cardNo)
+{
+	return strtoupper(trim((string) $cardNo)) === PATIENT_WALKIN_CARD_NO;
+}
+
+/**
+ * Rowid of the shared walk-in profile, 0 when it does not exist yet.
+ *
+ * @param	DoliDB	$db		Database handler
+ * @return	int				>0 profile rowid, 0 when absent
+ */
+function patient_walkin_id($db)
+{
+	global $conf;
+
+	$sql = "SELECT rowid FROM ".$db->prefix()."patient_profile";
+	$sql .= " WHERE card_no = '".$db->escape(PATIENT_WALKIN_CARD_NO)."' AND entity IN (".getEntity('patientprofile').")";
+	$sql .= " ORDER BY rowid ASC LIMIT 1";
+	$resql = $db->query($sql);
+	if (!$resql) {
+		return 0;
+	}
+	$obj = $db->fetch_object($resql);
+	$db->free($resql);
+	return $obj ? (int) $obj->rowid : 0;
+}
+
+/**
+ * Fetch the shared walk-in profile, creating it on first use. The profile
+ * carries no sensitive data (no ID number, no birth date) and uses the fixed
+ * card number WALKIN instead of the normal numbering sequence.
+ *
+ * The name is stored as data (not translated at creation time) so it does not
+ * depend on the language of whoever happened to create it first.
+ *
+ * @param	DoliDB	$db		Database handler
+ * @param	User	$user	Acting user (must hold patient write/profile rights)
+ * @return	int				>0 profile rowid, <0 on error
+ */
+function patient_ensure_walkin($db, $user)
+{
+	$id = patient_walkin_id($db);
+	if ($id > 0) {
+		return $id;
+	}
+	dol_include_once('/patient/class/patientprofile.class.php');
+
+	$dao = new PatientProfile($db);
+	$dao->card_no = PATIENT_WALKIN_CARD_NO;
+	$dao->gender = 'U';
+	$result = $dao->create($user, array('name' => PATIENT_WALKIN_NAME));
+	if ($result <= 0) {
+		// Lost race (another request created it concurrently) -> re-read
+		$again = patient_walkin_id($db);
+		if ($again > 0) {
+			return $again;
+		}
+		return -1;
+	}
+	return (int) $result;
+}
+
 /**
  * Tabs for the module admin pages.
  *

@@ -83,3 +83,4 @@ PatientAudit_READ_IDNUMBER=ID number revealed
 PatientAlreadyExists=This thirdparty already has a patient record
 PatientDoctorsIntro=Register Dolibarr users as doctors with a department and title. Scheduling lives in the booking module.
 PatientDoctorAdd=Register / update doctor
+PatientWalkinBadge=Walk-in

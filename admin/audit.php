@@ -264,7 +264,7 @@ print '<tr class="liste_titre_filter">';
 print '<td class="liste_titre"><input type="text" name="search_card" class="maxwidth150" value="'.dol_escape_htmltag($searchCard).'"></td>';
 print '<td class="liste_titre">'.$form->selectarray('search_action', $actionOptions, $searchAction, 1, 0, 0, '', 0, 0, 0, '', 'maxwidth150').'</td>';
 print '<td class="liste_titre">'.$form->select_dolusers($searchUser, 'search_user', 1, null, 0, '', '', 0, 0, 0, '', 0, '', 'maxwidth150').'</td>';
-print '<td class="liste_titre">'.$form->selectDate($searchDateStart, 'search_date_start', 0, 0, 1, '', 1, 0).' - '.$form->selectDate($searchDateEnd, 'search_date_end', 0, 0, 1, '', 1, 0).'</td>';
+print '<td class="liste_titre nowrap">'.$form->selectDate($searchDateStart, 'search_date_start', 0, 0, 1, '', 1, 0).' - '.$form->selectDate($searchDateEnd, 'search_date_end', 0, 0, 1, '', 1, 0).'</td>';
 print '<td class="liste_titre"></td><td class="liste_titre"></td>';
 print '<td class="liste_titre center maxwidthsearch">';
 print '<button type="submit" class="liste_titre button_search reposition" name="button_search" value="x"><span class="fa fa-search"></span></button>';

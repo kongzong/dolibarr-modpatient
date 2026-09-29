@@ -130,8 +130,15 @@ if (empty($rows)) {
 }
 foreach ($rows as $row) {
 	$url = dol_buildpath('/patient/card.php', 1).'?id='.((int) $row->rowid);
-	print '<tr class="oddeven">';
-	print '<td><a href="'.$url.'">'.img_picto('', 'user', 'class="pictofixedwidth"').dol_escape_htmltag($row->card_no).'</a></td>';
+	// The shared walk-in (OTC retail) profile is greyed so it never reads as a
+	// real person in the list.
+	$isWalkin = patient_is_walkin($row->card_no);
+	print '<tr class="oddeven'.($isWalkin ? ' opacitymedium' : '').'">';
+	print '<td><a href="'.$url.'">'.img_picto('', 'user', 'class="pictofixedwidth"').dol_escape_htmltag($row->card_no).'</a>';
+	if ($isWalkin) {
+		print ' <span class="badge badge-status0">'.$langs->trans("PatientWalkinBadge").'</span>';
+	}
+	print '</td>';
 	print '<td><a href="'.$url.'">'.dol_escape_htmltag($row->name).'</a></td>';
 	print '<td>'.(isset($genders[$row->gender]) ? $genders[$row->gender] : '').'</td>';
 	print '<td>'.($row->birth_date ? dol_escape_htmltag(substr($row->birth_date, 0, 10)) : '').'</td>';

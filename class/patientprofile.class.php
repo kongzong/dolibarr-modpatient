@@ -253,8 +253,12 @@ class PatientProfile extends CommonObject
 			throw new RuntimeException($this->error);
 		}
 
-		$numbering = new PatientCardNumbering($this->db);
-		$this->card_no = $numbering->nextReference(PatientCardNumbering::prefixFor(dol_now()));
+		// A caller may pin the card number (the shared walk-in profile uses the
+		// fixed WALKIN code); otherwise the numbering sequence is consumed.
+		if (trim((string) $this->card_no) === '') {
+			$numbering = new PatientCardNumbering($this->db);
+			$this->card_no = $numbering->nextReference(PatientCardNumbering::prefixFor(dol_now()));
+		}
 
 		$this->fk_soc = (int) $socId;
 		$this->entity = !empty($conf->entity) ? (int) $conf->entity : 1;
