@@ -181,7 +181,7 @@ class modPatient extends DolibarrModules
 			'fk_menu' => '',
 			'type' => 'top',
 			'titre' => 'ClinicMenu',
-			'prefix' => img_picto('', $this->picto, 'class="pictofixedwidth valignmiddle"'),
+			'prefix' => img_picto('', 'fa-hospital_fas_#e53935', 'class="pictofixedwidth valignmiddle"'),
 			'mainmenu' => 'clinic',
 			'leftmenu' => '',
 			'url' => '/patient/patientindex.php',
