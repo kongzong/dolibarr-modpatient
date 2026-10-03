@@ -192,8 +192,26 @@ class modPatient extends DolibarrModules
 			'target' => '',
 			'user' => 2,
 		);
+		// Group: visit & prescription (patients / records / prescriptions of the
+		// other healthcare modules are attached to it with
+		// fk_menu => 'fk_mainmenu=clinic,fk_leftmenu=clinic_visit')
 		$this->menu[$r++] = array(
 			'fk_menu' => 'fk_mainmenu=clinic',
+			'type' => 'left',
+			'titre' => 'ClinicMenuVisit',
+			'mainmenu' => 'clinic',
+			'leftmenu' => 'clinic_visit',
+			'prefix' => img_picto('', 'fa-stethoscope_fas_#00897b', 'class="paddingright pictofixedwidth"'),
+			'url' => '/patient/list.php',
+			'langs' => 'patient@patient',
+			'position' => 1000 + $r,
+			'enabled' => 'isModEnabled("patient")',
+			'perms' => '$user->hasRight("patient", "read") || $user->hasRight("medrecord", "read") || $user->hasRight("prescription", "read")',
+			'target' => '',
+			'user' => 2,
+		);
+		$this->menu[$r++] = array(
+			'fk_menu' => 'fk_mainmenu=clinic,fk_leftmenu=clinic_visit',
 			'type' => 'left',
 			'titre' => 'PatientList',
 			'mainmenu' => 'clinic',
@@ -221,8 +239,24 @@ class modPatient extends DolibarrModules
 			'target' => '',
 			'user' => 2,
 		);
+		// Group: setup (administrative entries of the clinic modules)
 		$this->menu[$r++] = array(
 			'fk_menu' => 'fk_mainmenu=clinic',
+			'type' => 'left',
+			'titre' => 'ClinicMenuAdmin',
+			'mainmenu' => 'clinic',
+			'leftmenu' => 'clinic_admin',
+			'prefix' => img_picto('', 'fa-cogs_fas_#546e7a', 'class="paddingright pictofixedwidth"'),
+			'url' => '/patient/admin/doctors.php',
+			'langs' => 'patient@patient',
+			'position' => 1600,
+			'enabled' => 'isModEnabled("patient")',
+			'perms' => '$user->hasRight("patient", "admin") || $user->hasRight("clinicpay", "admin") || $user->hasRight("pharmacy", "admin")',
+			'target' => '',
+			'user' => 2,
+		);
+		$this->menu[$r++] = array(
+			'fk_menu' => 'fk_mainmenu=clinic,fk_leftmenu=clinic_admin',
 			'type' => 'left',
 			'titre' => 'PatientDoctors',
 			'mainmenu' => 'clinic',
@@ -230,7 +264,7 @@ class modPatient extends DolibarrModules
 			'prefix' => img_picto('', 'fa-user-md_fas_#43a047', 'class="paddingright pictofixedwidth"'),
 			'url' => '/patient/admin/doctors.php',
 			'langs' => 'patient@patient',
-			'position' => 1000 + $r,
+			'position' => 1601,
 			'enabled' => 'isModEnabled("patient")',
 			'perms' => '$user->hasRight("patient", "admin")',
 			'target' => '',

@@ -84,3 +84,5 @@ PatientAlreadyExists=该第三方已有患者档案
 PatientDoctorsIntro=把 Dolibarr 用户登记为医生并指定科室与职称。排班在预约模块中维护。
 PatientDoctorAdd=登记 / 更新医生
 PatientWalkinBadge=散客
+ClinicMenuVisit=就诊与处方
+ClinicMenuAdmin=系统设置
