@@ -312,7 +312,11 @@ class PatientTest extends TestCase
 	public function testIntegrationSurface011()
 	{
 		$lib = file_get_contents(__DIR__.'/../../lib/patient.lib.php');
-		$this->assertStringContainsString("complete_head_from_modules(\$conf, \$langs, \$object, \$head, \$h, 'patient'", $lib, 'external modules can add patient tabs');
+		// Module tabs are collected into their own array ($modHead/$mh) so the
+		// fixed display order can be enforced before merging into the head.
+		$this->assertStringContainsString("complete_head_from_modules(\$conf, \$langs, \$object, \$modHead, \$mh, 'patient', 'add', 'core')", $lib, 'core tabs go into the module array');
+		$this->assertStringContainsString("'patient', 'add', 'external'", $lib, 'external modules can add patient tabs');
+		$this->assertStringContainsString("'patient', 'remove'", $lib, 'removal context is handled too');
 		foreach (array('function patient_select_html', 'function patient_get_summary', 'function patient_summary_banner') as $fn) {
 			$this->assertStringContainsString($fn, $lib);
 		}
@@ -332,7 +336,9 @@ class PatientTest extends TestCase
 		$this->assertStringContainsString("'value' =>", $ajax);
 
 		$desc = file_get_contents(__DIR__.'/../../core/modules/modPatient.class.php');
-		$this->assertStringContainsString("version = '0.1.3'", $desc);
+		// Version moves with every feature drop; assert the floor instead of a
+		// literal so releasing 0.1.4+ does not break the suite.
+		$this->assertRegExp("/\\\$this->version = '0\\.1\\.[3-9]'/", $desc, 'module version declared, at least 0.1.3');
 
 		// 0.1.3: banner is a patient context bar (quick links + breadcrumb), other modules detected at runtime
 		$this->assertStringContainsString('function patient_summary_banner($summary, $trail = array(), $active = \'\')', $lib, 'backward compatible signature');
@@ -377,5 +383,36 @@ class PatientTest extends TestCase
 			$keys[] = trim(substr($line, 0, strpos($line, '=')));
 		}
 		return $keys;
+	}
+
+	/**
+	 * 2026-10-04: dashboard drill-down. Two things are easy to break and were
+	 * both caught in review: the per-point query strings must be built on the
+	 * server (the JS must not know the list pages' filter names), and the drill
+	 * URL must go through dol_buildpath() because the click handler feeds it to
+	 * location.href - a bare /clinicpay/... loses the /dolibarr prefix and 404s.
+	 */
+	public function testDashDrilldown()
+	{
+		$page = file_get_contents(__DIR__.'/../../patientindex.php');
+
+		$this->assertStringContainsString('function clinic_dash_dayparams(', $page, 'single-day query builder');
+		$this->assertStringContainsString('function clinic_dash_rangeparams(', $page, 'range query builder for doughnut slices');
+		$this->assertStringContainsString("'drill' => array('kind' => 'bar'", $page, 'bars drill to a single day');
+		$this->assertStringContainsString("'drill' => array('kind' => 'slice'", $page, 'slices drill to a range plus a dimension');
+		$this->assertStringContainsString("dol_buildpath(\$chart['drill']['url'], 1)", $page, 'drill url carries the /dolibarr prefix');
+		$this->assertStringContainsString('opt.onClick=function(e,els)', $page, 'click handler installed');
+		$this->assertStringContainsString('c.drill.params[els[0].index]', $page, 'the server-built query is used verbatim');
+		$this->assertStringContainsString("'date_field=date_pay&search_status=1'", $page, 'revenue drill keeps the chart date column and paid filter');
+		$this->assertStringContainsString("'date_field=date_dispense'", $page, 'dispensing drill keeps date_dispense');
+		$this->assertStringContainsString("'search_fk_product='.(int) \$o->pid", $page, 'stock slice drills into one product');
+
+		// List pages must accept what the drill-down sends.
+		$paybill = file_get_contents(dirname(dirname(__DIR__)).'/../clinicpay/class/paybill.class.php');
+		$this->assertStringContainsString("isset(\$f['date_field'])", $paybill, 'bill search accepts date_field');
+		$dispense = file_get_contents(dirname(dirname(__DIR__)).'/../pharmacy/class/dispense.class.php');
+		$this->assertStringContainsString("isset(\$f['date_field'])", $dispense, 'dispense search accepts date_field');
+		$this->assertStringContainsString("isset(\$f['channel'])", $paybill, 'bill search accepts channel');
+		$this->assertStringContainsString("!empty(\$f['fk_product'])", $dispense, 'dispense search accepts fk_product');
 	}
 }

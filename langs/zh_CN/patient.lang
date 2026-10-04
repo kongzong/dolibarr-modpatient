@@ -107,3 +107,4 @@ ClinicDashVisits30d=近 %s 日就诊量
 ClinicDashNoData=所选区间暂无数据
 ClinicDashDispenses30d=近 %s 日发药单数
 ClinicDashStockTop=库存结构（数量占比 前 6）
+ClinicDashDrillHint=点击图表可查看明细

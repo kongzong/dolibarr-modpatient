@@ -195,6 +195,41 @@ function clinic_dash_series($db, $table, $dateField, $extraWhere, $sumField = ''
 	return $series;
 }
 
+/**
+ * Query string that lands a list page on one single day. List pages read
+ * Dolibarr's triplet date filter, so a bar drill-down reuses it with the same
+ * day on both ends.
+ *
+ * @param	string	$day		Day as YYYY-MM-DD
+ * @param	string	$extra		Extra query pairs already urlencoded
+ * @return	string				Query string without the leading "?"
+ */
+function clinic_dash_dayparams($day, $extra = '')
+{
+	$ts = strtotime($day);
+	$q = 'search_fromyear='.date('Y', $ts).'&search_frommonth='.date('m', $ts).'&search_fromday='.date('d', $ts);
+	$q .= '&search_toyear='.date('Y', $ts).'&search_tomonth='.date('m', $ts).'&search_today='.date('d', $ts);
+	return $extra === '' ? $q : $q.'&'.$extra;
+}
+
+/**
+ * Same as clinic_dash_dayparams() but for a whole range, which is what a
+ * doughnut slice (a 30-day mix) must drill into.
+ *
+ * @param	string	$from		First day as YYYY-MM-DD
+ * @param	string	$to		Last day as YYYY-MM-DD
+ * @param	string	$extra		Extra query pairs already urlencoded
+ * @return	string				Query string without the leading "?"
+ */
+function clinic_dash_rangeparams($from, $to, $extra = '')
+{
+	$f = strtotime($from);
+	$t = strtotime($to);
+	$q = 'search_fromyear='.date('Y', $f).'&search_frommonth='.date('m', $f).'&search_fromday='.date('d', $f);
+	$q .= '&search_toyear='.date('Y', $t).'&search_tomonth='.date('m', $t).'&search_today='.date('d', $t);
+	return $extra === '' ? $q : $q.'&'.$extra;
+}
+
 $clinic_dash_from = $fromDate;
 
 // Revenue per day (cashier / admin)
@@ -205,9 +240,13 @@ if ($canBill) {
 	$series = clinic_dash_series($db, 'clinicpay_bill', 'date_pay', "status = 1", 'amount_total');
 	$labels = array();
 	$data = array();
+	$dayLinks = array();
 	foreach ($series as $point) {
 		$labels[] = date('n/j', strtotime($point[0]));
 		$data[] = $point[1];
+		// The chart counts paid bills by date_pay, so the list must filter the
+		// same way or the drill-down totals would not match the bar.
+		$dayLinks[] = clinic_dash_dayparams($point[0], 'date_field=date_pay&search_status=1');
 	}
 	$charts[] = array(
 		'id' => 'clinic-dash-revenue',
@@ -219,6 +258,7 @@ if ($canBill) {
 		'height' => 120,
 		'money' => true,
 		'url' => '/clinicpay/report.php',
+		'drill' => array('kind' => 'bar', 'url' => '/clinicpay/bill_list.php', 'params' => $dayLinks),
 	);
 
 	// Channel mix over the same window
@@ -228,6 +268,7 @@ if ($canBill) {
 	$resql = $db->query($sql);
 	$mixLabels = array();
 	$mixData = array();
+	$mixKeys = array();
 	$mixColors = array('#00897b', '#fb8c00', '#5e35b1', '#c62828', '#546e7a');
 	$ci = 0;
 	if ($resql) {
@@ -237,6 +278,9 @@ if ($canBill) {
 			}
 			$mixLabels[] = clinicpay_channel_label((string) $o->channel);
 			$mixData[] = (float) $o->v;
+			// A slice covers the whole window, so it drills into the range and
+			// keeps the channel filter instead of a single day.
+			$mixKeys[] = clinic_dash_rangeparams($fromDate, $today, 'search_channel='.urlencode((string) $o->channel).'&date_field=date_pay&search_status=1');
 			$ci++;
 		}
 		$db->free($resql);
@@ -254,6 +298,7 @@ if ($canBill) {
 			'legend' => true,
 			'money' => true,
 			'url' => '/clinicpay/report.php',
+			'drill' => array('kind' => 'slice', 'url' => '/clinicpay/bill_list.php', 'params' => $mixKeys),
 		);
 	}
 }
@@ -263,9 +308,11 @@ if ($canVisit) {
 	$series = clinic_dash_series($db, 'medrecord', 'visit_date', '');
 	$labels = array();
 	$data = array();
+	$dayLinks = array();
 	foreach ($series as $point) {
 		$labels[] = date('n/j', strtotime($point[0]));
 		$data[] = $point[1];
+		$dayLinks[] = clinic_dash_dayparams($point[0]);
 	}
 	$charts[] = array(
 		'id' => 'clinic-dash-visits',
@@ -276,6 +323,8 @@ if ($canVisit) {
 		'colors' => '#00897b',
 		'height' => 150,
 		'url' => '/medrecord/report_visits.php',
+		// The visit list already filters on visit_date, the chart's own column.
+		'drill' => array('kind' => 'bar', 'url' => '/medrecord/list.php', 'params' => $dayLinks),
 	);
 }
 
@@ -285,9 +334,11 @@ if ($canPharmacy) {
 	$series = clinic_dash_series($db, 'pharmacy_dispense', 'date_dispense', '');
 	$labels = array();
 	$data = array();
+	$dayLinks = array();
 	foreach ($series as $point) {
 		$labels[] = date('n/j', strtotime($point[0]));
 		$data[] = $point[1];
+		$dayLinks[] = clinic_dash_dayparams($point[0], 'date_field=date_dispense');
 	}
 	$charts[] = array(
 		'id' => 'clinic-dash-dispenses',
@@ -298,10 +349,11 @@ if ($canPharmacy) {
 		'colors' => '#fb8c00',
 		'height' => 120,
 		'url' => '/pharmacy/report.php',
+		'drill' => array('kind' => 'bar', 'url' => '/pharmacy/list.php', 'params' => $dayLinks),
 	);
 
 	// Stock structure: top 6 products by quantity on hand
-	$sql = "SELECT p.ref, p.label, SUM(ps.reel) as q";
+	$sql = "SELECT p.rowid as pid, p.ref, p.label, SUM(ps.reel) as q";
 	$sql .= " FROM ".$P."product_stock as ps";
 	$sql .= " INNER JOIN ".$P."product as p ON p.rowid = ps.fk_product";
 	$sql .= " WHERE p.entity IN (".getEntity('product').")";
@@ -312,11 +364,14 @@ if ($canPharmacy) {
 	$resql = $db->query($sql);
 	$stockLabels = array();
 	$stockData = array();
+	$stockKeys = array();
 	$stockColors = array('#00897b', '#fb8c00', '#5e35b1', '#1e88e5', '#c62828', '#546e7a');
 	if ($resql) {
 		while ($o = $db->fetch_object($resql)) {
 			$stockLabels[] = (string) $o->ref;
 			$stockData[] = (float) $o->q;
+			// A product slice opens every dispensing sheet that contained it.
+			$stockKeys[] = 'search_fk_product='.(int) $o->pid;
 		}
 		$db->free($resql);
 	}
@@ -331,6 +386,7 @@ if ($canPharmacy) {
 			'height' => 150,
 			'legend' => true,
 			'url' => '/pharmacy/report_stock.php',
+			'drill' => array('kind' => 'slice', 'url' => '/pharmacy/list.php', 'params' => $stockKeys),
 		);
 	}
 }
@@ -428,6 +484,9 @@ foreach ($charts as $chart) {
 	print '<div class="div-table-responsive-no-min">';
 	print '<table class="noborder centpercent">';
 	print '<tr class="liste_titre"><th colspan="2">'.dol_escape_htmltag($chart['title']);
+	if (!empty($chart['drill'])) {
+		print '<span class="opacitymedium fontsmall paddingleft">'.dol_escape_htmltag($langs->trans("ClinicDashDrillHint")).'</span>';
+	}
 	if (!empty($chart['url'])) {
 		print '<a href="'.dol_buildpath($chart['url'], 1).'"><span class="badge marginleftonlyshort">...</span></a>';
 	}
@@ -460,6 +519,14 @@ if ($charts) {
 			'colors' => $chart['colors'],
 			'legend' => !empty($chart['legend']),
 			'money' => !empty($chart['money']),
+			// drill.url must go through dol_buildpath(): the click handler feeds
+			// it to location.href, and a bare /clinicpay/... drops the
+			// /dolibarr prefix and 404s.
+			'drill' => isset($chart['drill']) ? array(
+				'kind' => $chart['drill']['kind'],
+				'url' => dol_buildpath($chart['drill']['url'], 1),
+				'params' => $chart['drill']['params'],
+			) : null,
 		);
 	}
 	if ($payload) {
@@ -483,6 +550,12 @@ if ($charts) {
 		print 'var s=c.money?Number(v).toFixed(2):String(v);return (c.type==="doughnut")?(x.label+": "+s):s;}}}},cutout:"55%"};';
 		print 'if(isBar){opt.scales={x:{ticks:{font:{size:9},maxRotation:0,autoSkipPadding:8},grid:{display:false}},';
 		print 'y:{beginAtZero:true,ticks:{font:{size:9},precision:0}}};}';
+		// Drill-down: the server precomputes one query string per data point so
+		// the JS never has to know the list pages' filter names.
+		print 'if(c.drill&&c.drill.url){';
+		print 'opt.onClick=function(e,els){if(!els.length)return;var q=c.drill.params[els[0].index];if(q){window.location.href=c.drill.url+"?"+q;}};';
+		print 'opt.onHover=function(e,els){var t=e.native&&e.native.target;if(t){t.style.cursor=els.length?"pointer":"default";}};';
+		print '}';
 		print 'new Chart(el.getContext("2d"),{type:c.type,data:ds,options:opt});});';
 		print '});';
 		print '</script>';

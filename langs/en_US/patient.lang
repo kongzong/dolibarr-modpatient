@@ -107,3 +107,4 @@ ClinicDashVisits30d=Visits, last %s days
 ClinicDashNoData=No data in this period
 ClinicDashDispenses30d=Dispenses, last %s days
 ClinicDashStockTop=Stock structure (top 6 by quantity)
+ClinicDashDrillHint=Click a chart to drill down
