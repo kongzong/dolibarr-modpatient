@@ -124,10 +124,10 @@ print '<tr><td class="titlefieldcreate fieldrequired">'.$langs->trans("User").'<
 print $form->select_dolusers(GETPOSTINT('fk_user'), 'fk_user', 1, null, 0, '', '', 0, 0, 0, '', 0, '', 'minwidth300');
 print '</td></tr>';
 print '<tr><td>'.$langs->trans("PatientDictDepartment").'</td><td>';
-print $form->selectarray('fk_department', $departments, GETPOSTINT('fk_department'), 1, 0, 0, '', 0, 0, 0, '', 'minwidth200');
+print $form->selectarray('fk_department', $departments, GETPOSTINT('fk_department'), -1, 0, 0, '', 0, 0, 0, '', 'minwidth200');
 print '</td></tr>';
 print '<tr><td>'.$langs->trans("PatientDictDoctorTitle").'</td><td>';
-print $form->selectarray('title_code', $titles, GETPOST('title_code', 'aZ09'), 1, 0, 0, '', 0, 0, 0, '', 'minwidth200');
+print $form->selectarray('title_code', $titles, GETPOST('title_code', 'aZ09'), -1, 0, 0, '', 0, 0, 0, '', 'minwidth200');
 print '</td></tr>';
 print '</table>';
 print '<div class="center"><input type="submit" class="button button-save" value="'.$langs->trans("Save").'"></div>';

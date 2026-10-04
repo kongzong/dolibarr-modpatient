@@ -108,7 +108,7 @@ print '<tr class="liste_titre_filter">';
 print '<td class="liste_titre" colspan="4"><input type="text" name="search" class="minwidth300" placeholder="'.dol_escape_htmltag($langs->trans("PatientSearchHint")).'" value="'.dol_escape_htmltag($search).'"></td>';
 print '<td class="liste_titre"></td>';
 print '<td class="liste_titre center">';
-print Form::selectarray('search_status', array('1' => $langs->trans("Enabled"), '0' => $langs->trans("Disabled")), $status >= 0 ? (string) $status : '', 1, 0, 0, '', 0, 0, 0, '', 'maxwidth100');
+print Form::selectarray('search_status', array('1' => $langs->trans("Enabled"), '0' => $langs->trans("Disabled")), $status >= 0 ? (string) $status : '', -1, 0, 0, '', 0, 0, 0, '', 'maxwidth100');
 print '</td>';
 print '<td class="liste_titre center maxwidthsearch">';
 print '<button type="submit" class="liste_titre button_search reposition" name="button_search" value="x"><span class="fa fa-search"></span></button>';

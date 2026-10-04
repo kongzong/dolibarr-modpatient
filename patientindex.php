@@ -452,15 +452,19 @@ if ($rows) {
 }
 
 // ---- alerts
+// One visual style for all rows: the urgency is carried by the icon colour
+// (red / orange / blue), not by different td classes, so the list reads as
+// one consistent list of links. Each link drills into the target page WITH
+// its filter, so the click lands on exactly the rows the alert counts.
 $alertRows = '';
 if ($expiryExpired > 0) {
-	$alertRows .= '<tr><td class="error"><a href="'.dol_buildpath('/pharmacy/expiry.php', 1).'">'.dol_escape_htmltag($langs->trans("ClinicDashAlertExpired", $expiryExpired)).'</a></td></tr>';
+	$alertRows .= '<tr><td>'.img_picto('', 'fa-exclamation-triangle_fas_#d32f2f', 'class="pictofixedwidth valignmiddle"').'<a class="paddingleftsmall" href="'.dol_buildpath('/pharmacy/expiry.php', 1).'?mode=expired">'.dol_escape_htmltag($langs->trans("ClinicDashAlertExpired", $expiryExpired)).'</a></td></tr>';
 }
 if ($expirySoon > 0) {
-	$alertRows .= '<tr><td class="opacitymedium"><a href="'.dol_buildpath('/pharmacy/expiry.php', 1).'">'.dol_escape_htmltag($langs->trans("ClinicDashAlertSoon", $expirySoon)).'</a></td></tr>';
+	$alertRows .= '<tr><td>'.img_picto('', 'fa-clock_fas_#ef6c00', 'class="pictofixedwidth valignmiddle"').'<a class="paddingleftsmall" href="'.dol_buildpath('/pharmacy/expiry.php', 1).'?mode=soon">'.dol_escape_htmltag($langs->trans("ClinicDashAlertSoon", $expirySoon)).'</a></td></tr>';
 }
 if (!empty($stats['drafts'])) {
-	$alertRows .= '<tr><td class="opacitymedium"><a href="'.dol_buildpath('/clinicpay/bill_list.php', 1).'">'.dol_escape_htmltag($langs->trans("ClinicDashAlertDrafts", (int) $stats['drafts'])).'</a></td></tr>';
+	$alertRows .= '<tr><td>'.img_picto('', 'fa-file-invoice-dollar_fas_#1e88e5', 'class="pictofixedwidth valignmiddle"').'<a class="paddingleftsmall" href="'.dol_buildpath('/clinicpay/bill_list.php', 1).'?search_status=0">'.dol_escape_htmltag($langs->trans("ClinicDashAlertDrafts", (int) $stats['drafts'])).'</a></td></tr>';
 }
 if ($alertRows) {
 	clinic_dash_card($langs->trans("ClinicDashTodo"), $alertRows);

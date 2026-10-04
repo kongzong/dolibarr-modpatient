@@ -297,7 +297,7 @@ function patient_print_form_rows(PatientProfile $object, $isCreate)
 
 	// ID document: type always editable; number on create, or on edit with 'profile'
 	print '<tr><td>'.$langs->trans("PatientIdType").'</td><td>';
-	print $form->selectarray('id_type', $idTypes, GETPOSTISSET('id_type') ? GETPOST('id_type', 'aZ09') : $object->id_type, 1, 0, 0, '', 0, 0, 0, '', 'minwidth150');
+	print $form->selectarray('id_type', $idTypes, GETPOSTISSET('id_type') ? GETPOST('id_type', 'aZ09') : $object->id_type, -1, 0, 0, '', 0, 0, 0, '', 'minwidth150');
 	print '</td></tr>';
 	if ($isCreate || $canProfile) {
 		print '<tr><td>'.$langs->trans("PatientIdNumber").'</td><td>';
