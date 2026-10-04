@@ -413,6 +413,10 @@ class PatientTest extends TestCase
 		$dispense = file_get_contents(dirname(dirname(__DIR__)).'/../pharmacy/class/dispense.class.php');
 		$this->assertStringContainsString("isset(\$f['date_field'])", $dispense, 'dispense search accepts date_field');
 		$this->assertStringContainsString("isset(\$f['channel'])", $paybill, 'bill search accepts channel');
-		$this->assertStringContainsString("!empty(\$f['fk_product'])", $dispense, 'dispense search accepts fk_product');
+		// 2026-10-04: the guard became "(int) $f['fk_product'] > 0" because
+		// !empty() is true for the -1 a select submits when nothing is chosen, so
+		// the id reached the WHERE clause and emptied the list. A positive id is
+		// what "filter by product" actually means.
+		$this->assertStringContainsString("(int) \$f['fk_product'] > 0", $dispense, 'dispense search filters by product only for a positive id');
 	}
 }
