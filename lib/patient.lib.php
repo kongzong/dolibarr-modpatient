@@ -576,6 +576,9 @@ function patient_action_bar($fkPatient, $compact = false)
 	if ($user->hasRight('patient', 'read') && $user->hasRight('patient', 'profile')) {
 		$actions[] = array('label' => $langs->trans('PatientAllergyAdd'), 'url' => dol_buildpath('/patient/allergies.php', 1).'?id='.$fkPatient);
 	}
+	if ($user->hasRight('patient', 'read')) {
+		$actions[] = array('label' => $langs->trans('PatientSelfQR'), 'url' => dol_buildpath('/patient/self_qr.php', 1).'?id='.$fkPatient);
+	}
 	if (empty($actions)) {
 		return '';
 	}
