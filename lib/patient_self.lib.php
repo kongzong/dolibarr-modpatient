@@ -146,6 +146,11 @@ function patientSelfStatusBadge($kind, $status)
 			1 => array('PatientSelfStPaid', 'ok'),
 			9 => array('PatientSelfStRefunded', 'bad'),
 		),
+		'card' => array(
+			0 => array('PatientSelfStCardValid', 'ok'),
+			1 => array('PatientSelfStCardUsed', 'muted'),
+			2 => array('PatientSelfStCardExpired', 'bad'),
+		),
 	);
 	$def = isset($map[$kind][$status]) ? $map[$kind][$status] : array('PatientSelfStDraft', 'muted');
 	return array('label' => $langs->trans($def[0]), 'cls' => $def[1]);
@@ -292,6 +297,44 @@ function patientSelfBills($db, $pid, $limit = 10)
 			'channel' => isset($channelMap[$r->channel]) ? $channelMap[$r->channel] : (string) $r->channel,
 			'status' => (int) $r->status,
 			'lines' => $lines,
+		);
+	}
+	return $out;
+}
+
+/**
+ * 患者名下次卡（患者级资产）。退卡(status=3)不展示；有效/已用完/已过期均展示。
+ *
+ * @param DoliDB $db
+ * @param int    $pid patient_profile.rowid
+ * @return array[] 每张卡：ref/name/type/remain/remain_unit/date_end/status
+ */
+function patientSelfCards($db, $pid)
+{
+	$prefix = $db->prefix();
+	$sql = "SELECT c.ref, c.card_type, c.total_count, c.used_count, c.total_value, c.used_value, c.date_end, c.status, p.label AS product_label";
+	$sql .= " FROM ".$prefix."clinicpay_card c";
+	$sql .= " LEFT JOIN ".$prefix."product p ON p.rowid = c.fk_product";
+	$sql .= " WHERE c.fk_patient = ".((int) $pid)." AND c.status <> 3";
+	$sql .= " ORDER BY c.status ASC, c.date_end ASC";
+	$resq = $db->query($sql);
+	if (!$resq) {
+		return array();
+	}
+	$out = array();
+	while ($r = $db->fetch_object($resq)) {
+		if ($r->card_type === 'COUNT') {
+			$remain = max(0, (int) $r->total_count - (int) $r->used_count);
+		} else {
+			$remain = max(0, (float) $r->total_value - (float) $r->used_value);
+		}
+		$out[] = array(
+			'ref' => (string) $r->ref,
+			'name' => (string) $r->product_label,
+			'type' => ($r->card_type === 'COUNT') ? 'COUNT' : 'VALUE',
+			'remain' => $remain,
+			'date_end' => !empty($r->date_end) ? substr($r->date_end, 0, 10) : '',
+			'status' => (int) $r->status,
 		);
 	}
 	return $out;

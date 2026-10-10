@@ -176,6 +176,28 @@ if (empty($bills)) {
 	}
 }
 
+// ---- 次卡（患者级资产，退卡不展示）----
+$cards = patientSelfCards($db, $pid);
+
+print '<h3 style="margin:20px 0 8px;font-size:15px;">'.dol_escape_htmltag($langs->trans('PatientSelfCards')).'</h3>';
+if (empty($cards)) {
+	print '<p class="opacitymedium" style="font-size:12px;">'.dol_escape_htmltag($langs->trans('PatientSelfEmpty')).'</p>';
+} else {
+	foreach ($cards as $c) {
+		print '<div style="padding:10px 12px;border:1px solid #eee;border-radius:6px;margin-bottom:8px;background:#fafafa;">';
+		print '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;"><strong>'.dol_escape_htmltag($c['name'] !== '' ? $c['name'] : $c['ref']).'</strong>'.$selfBadge('card', $c['status']).'</div>';
+		if ($c['type'] === 'COUNT') {
+			print '<div class="opacitymedium" style="font-size:12px;margin-top:4px;">'.dol_escape_htmltag($langs->trans('PatientSelfCardTimes')).'：'.((int) $c['remain']).'</div>';
+		} else {
+			print '<div class="opacitymedium" style="font-size:12px;margin-top:4px;">'.dol_escape_htmltag($langs->trans('PatientSelfCardValue')).'：'.price($c['remain']).'</div>';
+		}
+		if ($c['date_end'] !== '') {
+			print '<div class="opacitymedium" style="font-size:12px;">'.dol_escape_htmltag($langs->trans('PatientSelfCardValidUntil')).'：'.dol_escape_htmltag($c['date_end']).'</div>';
+		}
+		print '</div>';
+	}
+}
+
 print '</div>';
 
 llxFooter();
