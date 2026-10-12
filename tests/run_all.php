@@ -68,7 +68,7 @@ $conf->file = new stdClass();
 $conf->file->instance_unique_id = 'test-instance-key';
 $conf->entity = 1;
 
-$testFiles = array('PatientTest.php', 'PatientNumberingTest.php');
+$testFiles = array('PatientTest.php', 'PatientNumberingTest.php', 'PatientSelfTest.php');
 
 $pass = 0; $fail = 0;
 foreach ($testFiles as $file) {

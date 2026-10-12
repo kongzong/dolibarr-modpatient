@@ -24,7 +24,11 @@
  *          设计约束：token 内编码 pid，后端只以解出 pid 为 WHERE，天然隔离跨人。
  */
 
-require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
+// dolibarr_set_const 所在文件。仅当路径可解析时引入；纯函数（验签/HMAC）不依赖它，
+// 无 DB 的单元测试环境（run_all shim）下跳过即可。
+if (defined('DOL_DOCUMENT_ROOT') && file_exists(DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php')) {
+	require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
+}
 
 /**
  * HMAC 密钥。首次调用自动生成 32 字节随机值并持久化到 conf 表；之后复用。
@@ -150,6 +154,11 @@ function patientSelfStatusBadge($kind, $status)
 			0 => array('PatientSelfStCardValid', 'ok'),
 			1 => array('PatientSelfStCardUsed', 'muted'),
 			2 => array('PatientSelfStCardExpired', 'bad'),
+		),
+		'allergy' => array(
+			1 => array('PatientSeverityMild', 'muted'),
+			2 => array('PatientSeverityModerate', 'warn'),
+			3 => array('PatientSeveritySevere', 'bad'),
 		),
 	);
 	$def = isset($map[$kind][$status]) ? $map[$kind][$status] : array('PatientSelfStDraft', 'muted');
@@ -335,6 +344,38 @@ function patientSelfCards($db, $pid)
 			'remain' => $remain,
 			'date_end' => !empty($r->date_end) ? substr($r->date_end, 0, 10) : '',
 			'status' => (int) $r->status,
+		);
+	}
+	return $out;
+}
+
+/**
+ * 患者有效过敏史（status=1，重度优先）。供自助查询页只读展示，不做任何写操作。
+ *
+ * @param DoliDB $db
+ * @param int    $pid patient_profile.rowid
+ * @return array[] 每条：name/type/severity/reaction/product_label
+ */
+function patientSelfAllergies($db, $pid)
+{
+	$prefix = $db->prefix();
+	$sql = "SELECT a.name, a.allergy_type, a.severity, a.reaction, p.label AS product_label";
+	$sql .= " FROM ".$prefix."patient_allergy a";
+	$sql .= " LEFT JOIN ".$prefix."product p ON p.rowid = a.fk_product";
+	$sql .= " WHERE a.fk_patient = ".((int) $pid)." AND a.status = 1";
+	$sql .= " ORDER BY a.severity DESC, a.name ASC";
+	$resq = $db->query($sql);
+	if (!$resq) {
+		return array();
+	}
+	$out = array();
+	while ($r = $db->fetch_object($resq)) {
+		$out[] = array(
+			'name' => (string) $r->name,
+			'type' => (string) $r->allergy_type,
+			'severity' => (int) $r->severity,
+			'reaction' => (string) $r->reaction,
+			'product_label' => (string) $r->product_label,
 		);
 	}
 	return $out;

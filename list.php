@@ -110,6 +110,7 @@ print '<td class="liste_titre"></td>';
 print '<td class="liste_titre center">';
 print Form::selectarray('search_status', array('1' => $langs->trans("Enabled"), '0' => $langs->trans("Disabled")), $status >= 0 ? (string) $status : '', -1, 0, 0, '', 0, 0, 0, '', 'maxwidth100');
 print '</td>';
+print '<td class="liste_titre"></td>';
 print '<td class="liste_titre center maxwidthsearch">';
 print '<button type="submit" class="liste_titre button_search reposition" name="button_search" value="x"><span class="fa fa-search"></span></button>';
 print '<button type="submit" class="liste_titre button_removefilter reposition" name="button_removefilter" value="x"><span class="fa fa-remove"></span></button>';
@@ -123,10 +124,11 @@ print '<th>'.$langs->trans("PatientBirthDate").'</th>';
 print '<th>'.$langs->trans("Phone").'</th>';
 print '<th class="center">'.$langs->trans("Status").'</th>';
 print '<th class="center">'.$langs->trans("PatientIdNumberMasked").'</th>';
+print '<th class="center">'.$langs->trans("PatientSelfQR").'</th>';
 print '</tr>';
 
 if (empty($rows)) {
-	print '<tr><td colspan="7"><span class="opacitymedium">'.$langs->trans("NoRecordFound").'</span></td></tr>';
+	print '<tr><td colspan="8"><span class="opacitymedium">'.$langs->trans("NoRecordFound").'</span></td></tr>';
 }
 foreach ($rows as $row) {
 	$url = dol_buildpath('/patient/card.php', 1).'?id='.((int) $row->rowid);
@@ -145,6 +147,12 @@ foreach ($rows as $row) {
 	print '<td>'.dol_escape_htmltag((string) $row->phone).'</td>';
 	print '<td class="center">'.($row->status ? $langs->trans("Enabled") : $langs->trans("Disabled")).'</td>';
 	print '<td class="center">'.dol_escape_htmltag(patient_mask_id($row->id_number_tail)).'</td>';
+	print '<td class="center">';
+	if (!$isWalkin) {
+		// Walk-in profiles have no real owner: a self-query code is meaningless
+		print '<a href="'.dol_buildpath('/patient/self_qr.php', 1).'?id='.((int) $row->rowid).'" title="'.dol_escape_htmltag($langs->trans("PatientSelfQR")).'"><span class="fa fa-qrcode"></span></a>';
+	}
+	print '</td>';
 	print '</tr>';
 }
 

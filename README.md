@@ -95,6 +95,19 @@ GET    /api/index.php/patient/doctors                             # read
   查看证件明文由页面显式写 `READ_PROFILE` / `READ_IDNUMBER`。管理员在 设置 → 患者模块 → 审计日志 只读查看。
 - 权限隔离：无 `profile` 的会话，档案页不查询过敏与病史表（不是隐藏），也看不到"过敏史"Tab。
 
+## 患者自助查询（扫码 token）
+
+- 入口：患者卡片页操作栏「生成查询码」，或患者列表行尾二维码图标（散客虚拟档案除外），均需 `read` 权限。
+- `self_qr.php` 生成 **15 分钟有效**的二维码 + 可点击链接。签名 = HMAC-SHA256(`pid|exp`, 密钥)，密钥存常量
+  `PATIENT_SELF_SECRET`（首次访问自动生成 64 位 hex，dolibarr_set_const 加密入库）。
+- `self.php` 免登录只读页（NOLOGIN）：基本档案（证件号脱敏）、过敏史（仅有效记录，重度优先）、
+  就诊、处方、收费、次卡余额（退卡不展示）。验签失败/过期显示"链接无效或已失效"。
+- 安全设计：查询一律以验签解出的 `pid` 为唯一 WHERE 条件（天然跨人隔离）；成功查看写 `SELF_VIEW`
+  审计（匿名，`fk_user=NULL`）；失败尝试写 `SELF_DENIED` 并限流——同 IP 15 分钟失败 >20 或
+  1 小时成功 >60 直接拒绝（为公网隧道场景预留的防爆破底线）。
+- 坑：签名参数名必须用 `sig`——`token` 是 Dolibarr CSRF 保留字，`main.inc.php` 会把它静默
+  `unset` 并注入 `errorcode=InvalidToken`，参数永远读不到。有单元测试守护该约定。
+
 ## 安装
 
 ```
@@ -117,8 +130,9 @@ Dolibarr → 设置 → 模块/应用 → 搜索 "Patient" → 启用。自动�
 ## 测试
 
 ```
-php tests/run_all.php                 # 结构 + 编号行为测试，无需数据库
+php tests/run_all.php                 # 结构 + 编号 + 自助查询行为测试，无需数据库
 php tests/integration/numbering.php   # 真实 MariaDB：20 并发建档取号、锁等待、回滚释放、缺表失败（隔离临时表）
+php tests/integration/self_query.php  # 真库：验签回环/篡改/过期、五类只读查询按 pid 隔离、退卡过滤（用 DoliWamp 栈内 php 跑）
 ```
 
 ## 开发约定
