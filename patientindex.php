@@ -45,6 +45,7 @@ if (!$res) {
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
 dol_include_once('/patient/lib/patient.lib.php');
+dol_include_once('/medrecord/class/followup.class.php');
 
 /**
  * @var Conf $conf
@@ -53,7 +54,7 @@ dol_include_once('/patient/lib/patient.lib.php');
  * @var User $user
  */
 
-$langs->loadLangs(array("patient@patient"));
+$langs->loadLangs(array("patient@patient", "medrecord@medrecord"));
 
 if (!$user->hasRight('patient', 'read')) {
 	accessforbidden();
@@ -468,6 +469,29 @@ if (!empty($stats['drafts'])) {
 }
 if ($alertRows) {
 	clinic_dash_card($langs->trans("ClinicDashTodo"), $alertRows);
+}
+
+// ---- follow-ups due today / overdue (in-app reminder, no cron; details and
+// status actions live in medrecord/followup.php)
+if ($user->hasRight('medrecord', 'read')) {
+	$followups = FollowupPlan::listDue($db, 8);
+	if (!empty($followups)) {
+		$typeLabels = array(
+			'revisit' => $langs->trans("FollowupPlanTypeRevisit"),
+			'medication' => $langs->trans("FollowupPlanTypeMedication"),
+			'chronic' => $langs->trans("FollowupPlanTypeChronic"),
+		);
+		$today = date('Y-m-d');
+		$rows = '';
+		foreach ($followups as $fu) {
+			$overdue = $fu->due_date < $today;
+			$rows .= '<tr><td>'.img_picto('', $overdue ? 'fa-exclamation-circle_fas_#d32f2f' : 'fa-bell_fas_#1e88e5', 'class="pictofixedwidth valignmiddle"');
+			$rows .= '<a class="paddingleftsmall" href="'.dol_buildpath('/medrecord/followup.php', 1).'?fk_patient='.((int) $fu->fk_patient).'">'.dol_escape_htmltag((string) $fu->patient_name).'</a>';
+			$rows .= ' <span class="opacitymedium fontsmall">'.dol_escape_htmltag(isset($typeLabels[$fu->ftype]) ? $typeLabels[$fu->ftype] : $fu->ftype).'</span></td>';
+			$rows .= '<td class="right"'.($overdue ? ' style="color:#d32f2f;font-weight:bold;"' : '').'>'.dol_print_date($db->jdate($fu->due_date), 'day').($overdue ? ' <span class="badge badge-status8">'.$langs->trans("FollowupPlanOverdue").'</span>' : '').'</td></tr>';
+		}
+		clinic_dash_card($langs->trans("FollowupPlanList"), $rows, '', 2);
+	}
 }
 
 // ---- latest visits
