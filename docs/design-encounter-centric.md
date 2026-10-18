@@ -114,3 +114,16 @@ ALTER TABLE llx_clinicpay_bill
 - **DDL/类/API**：`clinicpay_bill.fk_medrecord` 已加；`paybill` 类与 `api_clinicpay` 已支持读写；`bill_line.fk_prescription/fk_dispense` 已由 `snapshotLines`/`replaceLines` 落库。
 - **UI 联动（发药单→收费）**：`pharmacy/card.php` 已发药状态显示「收费」入口，链 `clinicpay/bill.php?fk_dispense`；`clinicpay/bill.php` 接收 `fk_dispense` 后自动预填收费行（含 `fk_prescription`/`fk_dispense` 行级溯源）并据处方回填 `fk_medrecord`，顶部显示「关联发药单」横幅；防重复收费（查 `clinicpay_bill_line.fk_dispense`）。
 - **Web 渲染验证**受环境 CSRF / 缺 playwright 限制未做（环境已知缺口，非代码问题）。
+
+## 9. 收费与发药的顺序口径（对账须知，2026-10-18 定稿）
+
+诊所流程是**前台先收费、药房后发药**，系统因此不强制「先发药后收费」：
+
+- 发药单停在「待发药」时，收费单可以确认收款并开发票——这是**合法的中间态**，不是缺陷。
+- 因此 **「已收费」≠「已交付」**。对账/报表必须记住：
+  - 「已收费但发药未确认」不是异常，是一个会自然存在的状态；
+  - 统计「已收且已交付」的金额必须 join 到 `pharmacy_dispense.status = 1`；
+  - 按 `bill_line.fk_dispense` 对账时，历史行可能只挂 `fk_prescription`（见 §3.2），需 OR 条件。
+- **风险与兜底**：钱收了但药一直没发（或发药被作废），系统不会自动退款。兜底是工作台提醒
+  「已收费超 N 天仍未发药」（`CLINICPAY_UNDISPENSED_DAYS`，默认 1 天），点击直达
+  收费列表 `?search_status=1&search_undispensed=1`；收费报表徽标下也有口径脚注。

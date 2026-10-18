@@ -54,7 +54,7 @@ dol_include_once('/medrecord/class/followup.class.php');
  * @var User $user
  */
 
-$langs->loadLangs(array("patient@patient", "medrecord@medrecord"));
+$langs->loadLangs(array("patient@patient", "medrecord@medrecord", "clinicpay@clinicpay"));
 
 if (!$user->hasRight('patient', 'read')) {
 	accessforbidden();
@@ -466,6 +466,26 @@ if ($expirySoon > 0) {
 }
 if (!empty($stats['drafts'])) {
 	$alertRows .= '<tr><td>'.img_picto('', 'fa-file-invoice-dollar_fas_#1e88e5', 'class="pictofixedwidth valignmiddle"').'<a class="paddingleftsmall" href="'.dol_buildpath('/clinicpay/bill_list.php', 1).'?search_status=0">'.dol_escape_htmltag($langs->trans("ClinicDashAlertDrafts", (int) $stats['drafts'])).'</a></td></tr>';
+}
+
+// Paid but not dispensed: "pay first, dispense later" is the normal clinic
+// flow, so this is NOT an error state -- but a bill sitting in it for days
+// means the medicine was never handed over (or the refund was forgotten).
+if ($user->hasRight('clinicpay', 'read')) {
+	$undispensedDays = max(0, getDolGlobalInt('CLINICPAY_UNDISPENSED_DAYS', 1));
+	$pending = defined('PHARMACY_STATUS_PENDING') ? PHARMACY_STATUS_PENDING : 0;
+	$sql = "SELECT COUNT(DISTINCT b.rowid) AS n FROM ".$db->prefix()."clinicpay_bill AS b";
+	$sql .= " INNER JOIN ".$db->prefix()."clinicpay_bill_line AS l ON l.fk_bill = b.rowid";
+	$sql .= " INNER JOIN ".$db->prefix()."pharmacy_dispense AS d ON d.rowid = l.fk_dispense";
+	$sql .= " WHERE b.entity = ".$entity." AND b.status = 1 AND d.status = ".$pending;
+	$sql .= " AND b.date_pay <= DATE_SUB(CURDATE(), INTERVAL ".$undispensedDays." DAY)";
+	$resq = $db->query($sql);
+	$undispensed = $resq ? (int) $db->fetch_object($resq)->n : 0;
+	if ($resq) { $db->free($resq); }
+	if ($undispensed > 0) {
+		$alertRows .= '<tr><td>'.img_picto('', 'fa-hourglass-half_fas_#ef6c00', 'class="pictofixedwidth valignmiddle"');
+		$alertRows .= '<a class="paddingleftsmall" href="'.dol_buildpath('/clinicpay/bill_list.php', 1).'?search_status=1&search_undispensed=1">'.dol_escape_htmltag($langs->trans("ClinicDashAlertUndispensed", $undispensedDays, $undispensed)).'</a></td></tr>';
+	}
 }
 if ($alertRows) {
 	clinic_dash_card($langs->trans("ClinicDashTodo"), $alertRows);
