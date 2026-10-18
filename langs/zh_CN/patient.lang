@@ -162,3 +162,5 @@ PatientSelfCardValidUntil=有效期至
 PatientSelfStCardValid=有效
 PatientSelfStCardUsed=已用完
 PatientSelfStCardExpired=已过期
+
+Dictionaries=字典维护
