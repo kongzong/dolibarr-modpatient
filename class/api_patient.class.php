@@ -56,7 +56,7 @@ class Patient extends DolibarrApi
 	/**
 	 * Search patients by card number, name, phone or exact ID number.
 	 *
-	 * @url	GET patients
+	 * @url	GET /
 	 *
 	 * @param	string	$q		Free text (an ID-looking value is matched exactly by hash)
 	 * @param	int		$limit	Page size (max 100)
@@ -99,7 +99,7 @@ class Patient extends DolibarrApi
 	 * Get one patient. Allergies and history are included only for 'profile'
 	 * holders (and that read is audited).
 	 *
-	 * @url	GET patients/{id}
+	 * @url	GET {id}
 	 *
 	 * @param	int		$id		Patient rowid
 	 * @return	array<string,mixed>
@@ -133,7 +133,7 @@ class Patient extends DolibarrApi
 	 *         "emergency_name": "...", "emergency_phone": "...", "history_note": "...", "note_private": "..." }
 	 * id_number is consumed in memory and stored encrypted; it is not echoed back.
 	 *
-	 * @url	POST patients
+	 * @url	POST /
 	 *
 	 * @param	array	$request_data	Body
 	 * @return	array<string,mixed>
@@ -195,7 +195,7 @@ class Patient extends DolibarrApi
 	/**
 	 * Active allergies of a patient.
 	 *
-	 * @url	GET patients/{id}/allergies
+	 * @url	GET {id}/allergies
 	 *
 	 * @param	int		$id		Patient rowid
 	 * @return	array<int,array<string,mixed>>
@@ -220,7 +220,7 @@ class Patient extends DolibarrApi
 	 *
 	 * Body: { "name": "...", "allergy_type": "DRUG|FOOD|OTHER", "fk_product": 0, "severity": 1-3, "reaction": "..." }
 	 *
-	 * @url	POST patients/{id}/allergies
+	 * @url	POST {id}/allergies
 	 *
 	 * @param	int		$id				Patient rowid
 	 * @param	array	$request_data	Body
@@ -258,7 +258,7 @@ class Patient extends DolibarrApi
 	/**
 	 * Soft-remove an allergy (kept in the database, flagged removed).
 	 *
-	 * @url	DELETE patients/{id}/allergies/{aid}
+	 * @url	DELETE {id}/allergies/{aid}
 	 *
 	 * @param	int		$id		Patient rowid
 	 * @param	int		$aid	Allergy rowid

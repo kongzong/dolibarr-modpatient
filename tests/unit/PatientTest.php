@@ -281,8 +281,8 @@ class PatientTest extends TestCase
 		}
 		$this->assertStringContainsString("'READ_PROFILE'", $api, 'API medical reads are audited');
 		$this->assertStringContainsString("hasRight('patient', 'profile')", $api);
-		$this->assertStringContainsString('@url	GET patients/{id}/allergies', $api);
-		$this->assertStringContainsString('@url	DELETE patients/{id}/allergies/{aid}', $api);
+		$this->assertStringContainsString('@url	GET {id}/allergies', $api);
+		$this->assertStringContainsString('@url	DELETE {id}/allergies/{aid}', $api);
 
 		$tab = file_get_contents(__DIR__.'/../../tab.php');
 		$this->assertStringContainsString('createForThirdparty(', $tab);
