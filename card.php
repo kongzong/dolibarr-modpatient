@@ -484,7 +484,7 @@ if ($action == 'create') {
 			print '<tr><td class="tdtop">'.$langs->trans("PatientHistory").'</td><td>'.dol_nl2br(dol_escape_htmltag((string) $object->history_note, 0, 1)).'</td></tr>';
 		}
 		print '<tr><td class="tdtop">'.$langs->trans("NotePrivate").'</td><td>'.dol_nl2br(dol_escape_htmltag((string) $object->note_private, 0, 1)).'</td></tr>';
-		print '<tr><td>'.$langs->trans("DateCreation").'</td><td>'.dol_print_date($object->date_creation, 'dayhour').'</td></tr>';
+		print '<tr><td>'.$langs->trans("DateCreation").'</td><td>'.dol_print_date($object->date_creation, '%Y-%m-%d %H:%M').'</td></tr>';
 		print '</table></div></div>';
 		print '<div class="clearboth"></div>';
 

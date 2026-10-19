@@ -295,7 +295,7 @@ if ($canProfile || $user->hasRight('patient', 'admin')) {
 		print '<ul style="margin:0;padding-left:18px;">';
 		foreach ($audit as $a) {
 			$who = trim($a->lastname.' '.$a->firstname);
-			print '<li>'.dol_print_date($db->jdate($a->date_creation), 'dayhour').' &middot; <code>'.dol_escape_htmltag($a->action).'</code>'.($who ? ' &middot; '.dol_escape_htmltag($who) : '').'</li>';
+			print '<li>'.dol_print_date($db->jdate($a->date_creation), '%Y-%m-%d %H:%M').' &middot; <code>'.dol_escape_htmltag($a->action).'</code>'.($who ? ' &middot; '.dol_escape_htmltag($who) : '').'</li>';
 		}
 		print '</ul>';
 	}

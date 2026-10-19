@@ -518,7 +518,7 @@ if ($user->hasRight('medrecord', 'read')) {
 if (!empty($latestVisits)) {
 	$rows = '';
 	foreach ($latestVisits as $visit) {
-		$rows .= '<tr><td>'.dol_print_date($db->jdate($visit->visit_date), 'dayhour').'</td>';
+		$rows .= '<tr><td>'.dol_print_date($db->jdate($visit->visit_date), '%Y-%m-%d %H:%M').'</td>';
 		$rows .= '<td><a href="'.dol_buildpath('/patient/card.php', 1).'?id='.(int) $visit->fk_patient.'">'.dol_escape_htmltag((string) $visit->patient_name).'</a></td>';
 		$rows .= '<td class="right"><a href="'.dol_buildpath('/medrecord/card.php', 1).'?id='.(int) $visit->rowid.'">'.dol_escape_htmltag((string) $visit->ref).'</a></td></tr>';
 	}

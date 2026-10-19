@@ -245,6 +245,41 @@ function patient_doctor_options($db)
 }
 
 /**
+ * Doctor display label that never falls back to a bare "#id". The stored
+ * fk_doctor may be a patient_doctor rowid (seed/direct writes) or a user id
+ * (form submissions), and the record's doctor may no longer be in the active
+ * selector map. This resolves the real name in all those cases.
+ *
+ * @param	DoliDB	$db		Database handler
+ * @param	int		$id		fk_doctor (patient_doctor.rowid OR user id)
+ * @param	array	$map	Optional patient_doctor_options() map (keyed by fk_user)
+ * @return	string
+ */
+function patient_doctor_label($db, $id, $map = null)
+{
+	$id = (int) $id;
+	if ($id <= 0) {
+		return '';
+	}
+	if (is_array($map) && isset($map[$id])) {
+		return $map[$id];
+	}
+	$sql = "SELECT TRIM(CONCAT(u.lastname, ' ', u.firstname)) AS name";
+	$sql .= " FROM ".$db->prefix()."patient_doctor AS d";
+	$sql .= " INNER JOIN ".$db->prefix()."user AS u ON u.rowid = d.fk_user";
+	$sql .= " WHERE d.rowid = ".$id." OR d.fk_user = ".$id;
+	$resql = $db->query($sql);
+	if ($resql) {
+		$obj = $db->fetch_object($resql);
+		$db->free($resql);
+		if ($obj && trim((string) $obj->name) !== '') {
+			return trim((string) $obj->name);
+		}
+	}
+	return '#'.$id;
+}
+
+/**
  * Label of a dictionary code, or the code itself when unknown/inactive.
  *
  * @param	DoliDB	$db		Database handler

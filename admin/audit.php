@@ -296,7 +296,7 @@ while ($obj = $db->fetch_object($resql)) {
 	print '</td>';
 	print '<td>'.dol_escape_htmltag(isset($actionOptions[$obj->action]) ? $actionOptions[$obj->action] : $obj->action).'</td>';
 	print '<td>'.($obj->login ? dol_escape_htmltag(trim($obj->lastname.' '.$obj->firstname).' ('.$obj->login.')') : '').'</td>';
-	print '<td>'.dol_print_date($db->jdate($obj->date_creation), 'dayhoursec').'</td>';
+	print '<td>'.dol_print_date($db->jdate($obj->date_creation), '%Y-%m-%d %H:%M:%S').'</td>';
 	print '<td>'.dol_escape_htmltag((string) $obj->ip).'</td>';
 	print '<td class="small">'.patient_audit_render_detail($obj->detail).'</td>';
 	print '<td></td>';
