@@ -122,7 +122,6 @@ PatientSelfNotice=You are viewing your own medical data. This page shows only yo
 PatientSelfGender=Gender
 PatientSelfAge=Age
 PatientSelfPhone=Phone
-PatientSelfDetailPending=Visit, prescription and billing details will be added to this page.
 PatientSelfVisits=Visits
 PatientSelfPrescriptions=Prescriptions
 PatientSelfBills=Bills

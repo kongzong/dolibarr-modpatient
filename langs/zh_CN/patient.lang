@@ -122,7 +122,6 @@ PatientSelfNotice=您正在查看本人医疗数据。本页面仅展示您本�
 PatientSelfGender=性别
 PatientSelfAge=年龄
 PatientSelfPhone=联系电话
-PatientSelfDetailPending=就诊、处方、收费等明细数据将陆续接入本页。
 PatientSelfVisits=就诊记录
 PatientSelfPrescriptions=处方记录
 PatientSelfBills=收费记录
